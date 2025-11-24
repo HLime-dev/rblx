@@ -12,25 +12,21 @@ local Window = Rayfield:CreateWindow({
 })
 
 -------------------------------------------------------
---==================== ESP TAB ======================--
+--================== UTILITY TAB ====================--
 -------------------------------------------------------
 
-local ESPTab = Window:CreateTab("ESP", 4483362458)
+local UtilityTab = Window:CreateTab("Utility", 4483362458)
 
-ESPTab:CreateButton({
+-- ESP
+UtilityTab:CreateButton({
    Name = "ESP",
    Callback = function()
       loadstring(game:HttpGet('https://raw.githubusercontent.com/Lucasfin000/SpaceHub/main/UESP'))()
    end,
 })
 
--------------------------------------------------------
---=================== PLAYER TAB ====================--
--------------------------------------------------------
-
-local PlayerTab = Window:CreateTab("Player", 4483362458)
-
-PlayerTab:CreateSlider({
+-- Walkspeed
+UtilityTab:CreateSlider({
    Name = "Walkspeed",
    Range = {16, 200},
    Increment = 1,
@@ -44,7 +40,8 @@ PlayerTab:CreateSlider({
    end,
 })
 
-PlayerTab:CreateSlider({
+-- JumpPower
+UtilityTab:CreateSlider({
    Name = "JumpPower",
    Range = {50, 200},
    Increment = 1,
@@ -58,28 +55,18 @@ PlayerTab:CreateSlider({
    end,
 })
 
--------------------------------------------------------
---==================== NDS TAB =====================--
--------------------------------------------------------
-
-local NDSTab = Window:CreateTab("NDS", 4483362458)
-
-NDSTab:CreateButton({
+-- Anti Fall Damage
+UtilityTab:CreateButton({
    Name = "Anti Fall Damage",
    Callback = function()
       loadstring(game:HttpGet("https://rawscripts.net/raw/Natural-Disaster-Survival-No-fall-damage-68524"))()
    end,
 })
 
--------------------------------------------------------
---==================== FLY TAB =====================--
--------------------------------------------------------
-
-local FlyTab = Window:CreateTab("Fly", 4483362458)
-
-FlyTab:CreateButton({
+-- Fly GUI
+UtilityTab:CreateButton({
    Name = "Fly GUI V3",
-   Callback=function()
+   Callback = function()
       loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fly-Gui-V3-59173"))()
    end,
 })
