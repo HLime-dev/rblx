@@ -193,6 +193,28 @@ end)
 
 -----------
 ---------------------------------------------------------------------
+-- Auto-refresh Furniture Dropdown
+---------------------------------------------------------------------
+local function AutoRefreshFurnitureDropdown(interval)
+    interval = interval or 5 -- default refresh tiap 5 detik
+
+    task.spawn(function()
+        while true do
+            local furnitureList = ReturnFurniture()
+            -- update dropdown dengan list terbaru
+            m:Dropdown("Selected Furniture", furnitureList, function(option)
+                selected = option
+            end)
+            task.wait(interval)
+        end
+    end)
+end
+
+-- Jalankan auto-refresh tiap 5 detik
+AutoRefreshFurnitureDropdown(5)
+
+
+---------------------------------------------------------------------
 -- Bunker Furniture Scan
 ---------------------------------------------------------------------
 local selectedBunkerFurniture = nil
