@@ -1,1 +1,141 @@
---//=========================== --//  Dangerous Night Dev Panel --//  All-in-One Script (Rayfield) --//===========================  --== Load Rayfield == local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()  local Window = Rayfield:CreateWindow({     Name = "Dangerous Night Developer Panel",     LoadingTitle = "Initializing…",     LoadingSubtitle = "Developer Tools",     ConfigurationSaving = {         Enabled = false     } })  --//=========================== --// VARIABLES --//=========================== local player = game.Players.LocalPlayer local char = player.Character or player.CharacterAdded:Wait() local hrp = char:WaitForChild("HumanoidRootPart") local hum = char:WaitForChild("Humanoid")  local ItemsFolder = workspace:WaitForChild("Items") -- ubah jika folder beda local FoodsFolder = workspace:WaitForChild("Foods") -- folder food  local FlyEnabled = false local AutoFood = false local SelectedItem = nil  --//=========================== --// UPDATE ITEM LIST --//=========================== local function getItemList()     local list = {}      for _, item in ipairs(ItemsFolder:GetChildren()) do         table.insert(list, item.Name)     end      return list end  --//=========================== --// PANEL UTAMA --//=========================== local MainTab = Window:CreateTab("Main")  local ItemDropdown = MainTab:CreateDropdown({     Name = "Pilih Item",     Options = getItemList(),     CurrentOption = "",     Callback = function(option)         SelectedItem = option     end })  MainTab:CreateButton({     Name = "Refresh Daftar Item",     Callback = function()         ItemDropdown:Refresh(getItemList(), true)     end })  --//=========================== --// PICKUP ITEM --//=========================== MainTab:CreateButton({     Name = "Pickup Item Terpilih",     Callback = function()         if not SelectedItem then return end          local target = ItemsFolder:FindFirstChild(SelectedItem)         if target then             hrp.CFrame = target.CFrame * CFrame.new(0, 3, 0)             task.wait(.4)             fireproximityprompt(target:FindFirstChildWhichIsA("ProximityPrompt"))         end     end })  --//=========================== --// AUTO FOOD COLLECT --//=========================== MainTab:CreateToggle({     Name = "Auto Collect Food",     CurrentValue = false,     Callback = function(v)         AutoFood = v     end })  task.spawn(function()     while true do         task.wait(.2)         if AutoFood then             for _, f in ipairs(FoodsFolder:GetChildren()) do                 if f:FindFirstChildWhichIsA("ProximityPrompt") then                     hrp.CFrame = f.CFrame * CFrame.new(0, 3, 0)                     task.wait(.15)                     fireproximityprompt(f:FindFirstChildWhichIsA("ProximityPrompt"))                 end             end         end     end end)  --//=========================== --// SPEED CONTROL --//=========================== MainTab:CreateSlider({     Name = "Player Speed",     Range = {16, 120},     Increment = 1,     CurrentValue = 16,     Callback = function(val)         hum.WalkSpeed = val     end })  --//=========================== --// FLY MODE --//=========================== MainTab:CreateToggle({     Name = "Fly Mode",     CurrentValue = false,     Callback = function(v)         FlyEnabled = v     end })  -- basic fly loop task.spawn(function()     while true do         task.wait()         if FlyEnabled then             hum.PlatformStand = true             local move = Vector3.zero              if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then                 move = move + hrp.CFrame.LookVector             end             if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then                 move = move - hrp.CFrame.LookVector             end             if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then                 move = move - hrp.CFrame.RightVector             end             if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then                 move = move + hrp.CFrame.RightVector             end             if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then                 move = move + Vector3.new(0, 1, 0)             end             if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then                 move = move - Vector3.new(0, 1, 0)             end              hrp.Velocity = move * 50         else             hum.PlatformStand = false         end     end end)  --//=========================== --// DROP ITEM --//=========================== MainTab:CreateButton({     Name = "Drop Item di Inventory",     Callback = function()         local inv = player:WaitForChild("Backpack")          for _, tool in ipairs(inv:GetChildren()) do             tool.Parent = char             task.wait(.1)             tool:Deactivate()             hum:UnequipTools()         end     end })  Rayfield:Notify({     Title = "Loaded",     Content = "Developer panel siap!",     Duration = 4 })
+---------------------------------------------------------------------
+-- Furniture (Market + Bunker)
+---------------------------------------------------------------------
+
+local selected = nil
+local selectedBunkerFurniture = nil
+
+-- List furniture di MARKET
+local function ReturnFurniture()
+    local list = {}
+    for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if x:IsA("Folder") then
+            for _, md in ipairs(x:GetChildren()) do
+                if md:IsA("Model") and not table.find(list, md.Name) then
+                    table.insert(list, md.Name)
+                end
+            end
+        elseif x:IsA("Model") then
+            if not table.find(list, x.Name) then
+                table.insert(list, x.Name)
+            end
+        end
+    end
+    return list
+end
+
+-- List furniture di BUNKER pemain
+local function GetBunkerFurnitureList()
+    local list = {}
+    if not bunkerName then return list end
+
+    local bunkersFolder = workspace:FindFirstChild("Bunkers")
+    if not bunkersFolder then return list end
+
+    local myBunker = bunkersFolder:FindFirstChild(bunkerName)
+    if not myBunker then return list end
+
+    local furnFolder = myBunker:FindFirstChild("Wyposazenie")
+    if not furnFolder then return list end
+
+    for _, item in ipairs(furnFolder:GetChildren()) do
+        if item:IsA("Model") and not table.find(list, item.Name) then
+            table.insert(list, item.Name)
+        end
+    end
+
+    return list
+end
+
+---------------------------------------------------------------------
+-- Get Furniture From Market
+---------------------------------------------------------------------
+local function GetFurniture()
+    if not selected then return false end
+
+    local hrp = GetHRP()
+    if not hrp then return false end
+
+    local originalPos = hrp.CFrame
+    local MARKET_POS = CFrame.new(143, 5, -118)
+
+    hrp.CFrame = MARKET_POS
+    task.wait(0.4)
+
+    for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and model.Name == selected then
+                    pcall(function()
+                        game.ReplicatedStorage.PickupItemEvent:FireServer(model)
+                    end)
+                    task.wait(0.3)
+                    GetHRP().CFrame = originalPos
+                    return true
+                end
+            end
+        elseif folder:IsA("Model") and folder.Name == selected then
+            pcall(function()
+                game.ReplicatedStorage.PickupItemEvent:FireServer(folder)
+            end)
+            task.wait(0.3)
+            GetHRP().CFrame = originalPos
+            return true
+        end
+    end
+
+    return false
+end
+
+---------------------------------------------------------------------
+-- UI: Dropdown Market Furniture
+---------------------------------------------------------------------
+m:Dropdown("Market Furniture", ReturnFurniture(), function(option)
+    selected = option
+end)
+
+m:Button("Bring Market Furniture", function()
+    if selected then
+        GetFurniture()
+    end
+end)
+
+---------------------------------------------------------------------
+-- UI: Dropdown Bunker Furniture
+---------------------------------------------------------------------
+m:Dropdown("Bunker Furniture", GetBunkerFurnitureList(), function(option)
+    selectedBunkerFurniture = option
+end)
+
+m:Button("Take Bunker Furniture", function()
+    if not selectedBunkerFurniture then return end
+    if not bunkerName then return end
+
+    local bunkersFolder = workspace:FindFirstChild("Bunkers")
+    if not bunkersFolder then return end
+
+    local myBunker = bunkersFolder:FindFirstChild(bunkerName)
+    if not myBunker then return end
+
+    local furnFolder = myBunker:FindFirstChild("Wyposazenie")
+    if not furnFolder then return end
+
+    for _, model in ipairs(furnFolder:GetChildren()) do
+        if model:IsA("Model") and model.Name == selectedBunkerFurniture then
+
+            pcall(function()
+                game.ReplicatedStorage.PickupItemEvent:FireServer(model)
+            end)
+
+            if lib.Notification then
+                lib:Notification("Success", "Berhasil mengambil furniture dari bunker!", 3)
+            end
+
+            return
+        end
+    end
+
+    if lib.Notification then
+        lib:Notification("Error", "Furniture tidak ditemukan di bunker!", 3)
+    end
+end)
