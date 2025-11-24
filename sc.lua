@@ -195,16 +195,21 @@ end)
 ---------------------------------------------------------------------
 -- Auto-refresh Furniture Dropdown
 ---------------------------------------------------------------------
+---------------------------------------------------------------------
+-- Auto-refresh Furniture Dropdown (diperbaiki)
+---------------------------------------------------------------------
+local furnitureDropdown = m:Dropdown("Selected Furniture", ReturnFurniture(), function(option)
+    selected = option
+end)
+
 local function AutoRefreshFurnitureDropdown(interval)
     interval = interval or 5 -- default refresh tiap 5 detik
 
     task.spawn(function()
         while true do
             local furnitureList = ReturnFurniture()
-            -- update dropdown dengan list terbaru
-            m:Dropdown("Selected Furniture", furnitureList, function(option)
-                selected = option
-            end)
+            -- update options dropdown, tanpa membuat dropdown baru
+            furnitureDropdown:UpdateOptions(furnitureList)
             task.wait(interval)
         end
     end)
