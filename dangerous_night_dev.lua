@@ -1,275 +1,348 @@
--- Dangerous Night Developer Panel (Updated, Rayfield V4)
--- Put this LocalScript into StarterPlayer > StarterPlayerScripts
--- Folders expected: workspace.items, workspace.food  (case-sensitive as you specified)
+-- Dangerous Night — Dev Toolkit (v3)
+-- Single LocalScript meant for use in YOUR OWN game (Roblox Studio).
+-- Features: dropdown item selector, pickup, drop, auto-collect food, walk speed, fly, noclip, monsters ESP, teleport, robust error handling.
+-- Place this LocalScript into StarterPlayer -> StarterPlayerScripts
+-- Expected workspace folders (case-sensitive): workspace.items, workspace.food
+-- Optional server-side RemoteEvents (in ReplicatedStorage/RemoteEvents):
+--   RequestGiveItem, RequestDropItem, RequestCollectFood (recommended for secure ops)
 
-local success, err = pcall(function()
-
-    -- Rayfield V4 (stable source)
+local ok, err = pcall(function()
+    -- Rayfield V4 (stable)
     local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
 
+    -- Services
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local UserInputService = game:GetService("UserInputService")
     local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local CollectionService = game:GetService("CollectionService")
 
     local player = Players.LocalPlayer
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
 
-    -- Use the exact folder names you gave: "items" and "food"
+    -- Folder names (as requested)
     local ITEMS_NAME = "items"
-    local FOOD_NAME = "food"
+    local FOOD_NAME  = "food"
 
-    -- Try to find folders; if they don't exist, warn but keep script running
+    -- Try to find folders; create placeholder if absent to prevent errors
     local itemsFolder = workspace:FindFirstChild(ITEMS_NAME)
-    local foodFolder = workspace:FindFirstChild(FOOD_NAME)
-
     if not itemsFolder then
-        warn(("Folder '%s' not found in workspace. Create a Folder named '%s' and put pickup items there."):format(ITEMS_NAME, ITEMS_NAME))
-        -- create a local placeholder so script won't error (won't replicate to server)
+        warn(("Workspace folder '%s' not found; creating placeholder (empty)."):format(ITEMS_NAME))
         itemsFolder = Instance.new("Folder")
         itemsFolder.Name = ITEMS_NAME
-        itemsFolder.Parent = workspace -- attempt to create; if client can't create, it still prevents errors locally
+        itemsFolder.Parent = workspace
     end
-
+    local foodFolder = workspace:FindFirstChild(FOOD_NAME)
     if not foodFolder then
-        warn(("Folder '%s' not found in workspace. Create a Folder named '%s' and put food items there."):format(FOOD_NAME, FOOD_NAME))
+        warn(("Workspace folder '%s' not found; creating placeholder (empty)."):format(FOOD_NAME))
         foodFolder = Instance.new("Folder")
         foodFolder.Name = FOOD_NAME
         foodFolder.Parent = workspace
     end
 
-    -- Optional RemoteEvents if you set them on server for secure operations
+    -- Optional RemoteEvents (if you created them on server)
     local remoteFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-    local RequestGiveItem = remoteFolder and remoteFolder:FindFirstChild("RequestGiveItem") or nil
-    local RequestDropItem = remoteFolder and remoteFolder:FindFirstChild("RequestDropItem") or nil
-    local RequestCollectFood = remoteFolder and remoteFolder:FindFirstChild("RequestCollectFood") or nil
+    local RequestGiveItem = remoteFolder and remoteFolder:FindFirstChild("RequestGiveItem")
+    local RequestDropItem = remoteFolder and remoteFolder:FindFirstChild("RequestDropItem")
+    local RequestCollectFood = remoteFolder and remoteFolder:FindFirstChild("RequestCollectFood")
 
-    -- UI Setup
+    -- UI
     local Window = Rayfield:CreateWindow({
-        Name = "Dangerous Night Developer Panel",
-        LoadingTitle = "Initializing…",
-        LoadingSubtitle = "Developer Tools (V4)",
+        Name = "Dangerous Night Dev Toolkit (v3)",
+        LoadingTitle = "Initializing Toolkit",
+        LoadingSubtitle = "Rayfield V4",
         ConfigurationSaving = { Enabled = false }
     })
 
-    local Tab = Window:CreateTab("Main")
+    local mainTab = Window:CreateTab("Main")
+    local tpTab   = Window:CreateTab("Teleport")
+    local settingsTab = Window:CreateTab("Settings")
 
-    -- Utility: get item names (only direct children)
-    local function GetItemList()
-        local out = {}
-        for _, v in ipairs(itemsFolder:GetChildren()) do
-            table.insert(out, v.Name)
-        end
-        table.sort(out)
-        return out
-    end
-
-    local selectedItem = nil
-
-    local dropdown = Tab:CreateDropdown({
-        Name = "Select Item",
-        Options = GetItemList(),
-        CurrentOption = nil,
-        MultipleOptions = false,
-        Callback = function(option)
-            selectedItem = option
-        end
-    })
-
-    Tab:CreateButton({
-        Name = "Refresh Items",
-        Callback = function()
-            dropdown:Refresh(GetItemList(), true)
-            Rayfield:Notify({ Title = "Refreshed", Content = "Item list updated", Duration = 2 })
-        end
-    })
-
-    -- Helper: find object by name safely
-    local function FindItemByName(name)
+    ----------------------------
+    -- Utility functions
+    ----------------------------
+    local function safeFindItemByName(name)
         if not name then return nil end
         return itemsFolder:FindFirstChild(name)
     end
 
-    -- Helper: trigger proximity prompt (safe)
-    local function TriggerPrompt(target)
-        if not target then return false end
-        local prompt = target:FindFirstChildWhichIsA("ProximityPrompt", true)
-        if prompt then
-            -- fire local prompt (works if prompt is set to be triggerable by client)
-            local ok, e = pcall(function() prompt:InputHoldBegin() prompt:InputHoldEnd() end)
-            if not ok then
-                -- fallback
-                pcall(function() fireproximityprompt(prompt) end)
-            end
-            return true
-        else
-            return false
+    local function getChildrenPositions(obj)
+        local out = {}
+        for _, v in ipairs(obj:GetChildren()) do
+            local pos
+            if v:IsA("Model") and v.PrimaryPart then pos = v.PrimaryPart.Position
+            elseif v:IsA("BasePart") then pos = v.Position end
+            if pos then out[#out+1] = {inst = v, pos = pos} end
         end
+        return out
     end
 
-    -- PICKUP selected item: try remote if available, else try teleport+prompt
-    Tab:CreateButton({
+    local function triggerProximityPromptOn(inst)
+        if not inst then return false end
+        local prompt = inst:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if prompt then
+            -- try safe pcall fire methods
+            pcall(function()
+                -- InputHoldBegin/End may be needed for hold prompts
+                prompt:InputHoldBegin()
+                task.wait(0.05)
+                prompt:InputHoldEnd()
+            end)
+            -- fallback
+            pcall(function() fireproximityprompt(prompt) end)
+            return true
+        end
+        return false
+    end
+
+    ----------------------------
+    -- Item & Dropdown
+    ----------------------------
+    local function GetItemList()
+        local list = {}
+        for _, it in ipairs(itemsFolder:GetChildren()) do
+            table.insert(list, it.Name)
+        end
+        table.sort(list)
+        return list
+    end
+
+    local selectedItem = nil
+    local dropdown = mainTab:CreateDropdown({
+        Name = "Select Item",
+        Options = GetItemList(),
+        CurrentOption = nil,
+        MultipleOptions = false,
+        Callback = function(option) selectedItem = option end
+    })
+
+    mainTab:CreateButton({
+        Name = "Refresh Item List",
+        Callback = function()
+            dropdown:Refresh(GetItemList(), true)
+            Rayfield:Notify({Title = "Refreshed", Content = "Item list updated", Duration = 2})
+        end
+    })
+
+    -- Pickup selected item
+    mainTab:CreateButton({
         Name = "Pickup Selected Item",
         Callback = function()
             if not selectedItem then
-                Rayfield:Notify({ Title = "No item", Content = "Please select an item first", Duration = 2 })
+                Rayfield:Notify({Title="No Selection", Content="Please select an item first", Duration=2})
                 return
             end
-
             if RequestGiveItem then
-                -- Ask server to give the item (recommended for secure ops)
                 RequestGiveItem:FireServer(selectedItem)
-                Rayfield:Notify({ Title = "Requested", Content = "Asked server to give item: "..selectedItem, Duration = 2 })
+                Rayfield:Notify({Title="Requested", Content="Requested server to give "..selectedItem, Duration=2})
                 return
             end
-
-            local target = FindItemByName(selectedItem)
+            local target = safeFindItemByName(selectedItem)
             if not target then
-                Rayfield:Notify({ Title = "Not found", Content = "Item not found in workspace.items", Duration = 2 })
+                Rayfield:Notify({Title="Not found", Content="Selected item not in workspace." , Duration=2})
                 return
             end
-
-            -- attempt local pickup: teleport near and trigger prompt if exists
-            local pos = nil
-            if target:IsA("Model") and target.PrimaryPart then pos = target.PrimaryPart.Position
-            elseif target:IsA("BasePart") then pos = target.Position
-            end
-
+            -- teleport near and attempt prompt
+            local old = hrp.CFrame
+            local pos = (target:IsA("Model") and target.PrimaryPart and target.PrimaryPart.Position) or (target:IsA("BasePart") and target.Position)
             if pos then
-                local oldCFrame = hrp.CFrame
-                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-                task.wait(0.25)
-                local ok = TriggerPrompt(target)
+                hrp.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
                 task.wait(0.2)
-                hrp.CFrame = oldCFrame
+                local ok = triggerProximityPromptOn(target)
+                task.wait(0.15)
+                hrp.CFrame = old
                 if ok then
-                    Rayfield:Notify({ Title = "Picked", Content = selectedItem, Duration = 2 })
+                    Rayfield:Notify({Title="Picked", Content=selectedItem, Duration=1.5})
                 else
-                    Rayfield:Notify({ Title = "Tried", Content = "No prompt found — item may require server give", Duration = 2 })
+                    Rayfield:Notify({Title="Attempted", Content="No prompt found - server give may be required", Duration=2})
                 end
             else
-                Rayfield:Notify({ Title = "Invalid", Content = "Item has no position", Duration = 2 })
+                Rayfield:Notify({Title="Invalid", Content="Item has no position", Duration=2})
             end
         end
     })
 
     -- Pickup nearest convenience
-    Tab:CreateButton({
-        Name = "Pickup Nearest Item",
+    mainTab:CreateButton({
+        Name = "Pickup Nearest",
         Callback = function()
-            local hrppos = hrp.Position
+            local mine = hrp.Position
             local nearest, nd = nil, math.huge
             for _, it in ipairs(itemsFolder:GetChildren()) do
-                local pos
-                if it:IsA("Model") and it.PrimaryPart then pos = it.PrimaryPart.Position
-                elseif it:IsA("BasePart") then pos = it.Position end
+                local pos = (it:IsA("Model") and it.PrimaryPart and it.PrimaryPart.Position) or (it:IsA("BasePart") and it.Position)
                 if pos then
-                    local d = (pos - hrppos).Magnitude
+                    local d = (pos - mine).Magnitude
                     if d < nd then nd = d; nearest = it end
                 end
             end
-            if nearest then
-                -- try remote give first
-                if RequestGiveItem then
-                    RequestGiveItem:FireServer(nearest.Name)
-                    Rayfield:Notify({ Title = "Requested", Content = "Give "..nearest.Name, Duration = 2 })
-                else
-                    local old = hrp.CFrame
-                    hrp.CFrame = CFrame.new((nearest.PrimaryPart and nearest.PrimaryPart.Position or nearest.Position) + Vector3.new(0,3,0))
-                    task.wait(.2)
-                    TriggerPrompt(nearest)
-                    task.wait(.15)
-                    hrp.CFrame = old
-                end
+            if not nearest then Rayfield:Notify({Title="No items", Content="No items found", Duration=2}); return end
+            if RequestGiveItem then
+                RequestGiveItem:FireServer(nearest.Name)
+                Rayfield:Notify({Title="Requested", Content="Requested give "..nearest.Name, Duration=2})
             else
-                Rayfield:Notify({ Title = "No items", Content = "No items in workspace.items", Duration = 2 })
+                local old = hrp.CFrame
+                hrp.CFrame = CFrame.new(((nearest.PrimaryPart and nearest.PrimaryPart.Position) or nearest.Position) + Vector3.new(0,3,0))
+                task.wait(0.2)
+                triggerProximityPromptOn(nearest)
+                task.wait(0.15)
+                hrp.CFrame = old
             end
         end
     })
 
-    -- DROP selected: try server RemoteEvent, else attempt to move any tool from Backpack to workspace
-    Tab:CreateButton({
+    -- Drop selected / drop all
+    mainTab:CreateButton({
         Name = "Drop Selected Item",
         Callback = function()
-            if not selectedItem then
-                Rayfield:Notify({ Title = "No item", Content = "Select an item to drop", Duration = 2 })
-                return
-            end
-
+            if not selectedItem then Rayfield:Notify({Title="No Selection", Content="Select item to drop", Duration=2}); return end
             if RequestDropItem then
                 RequestDropItem:FireServer(selectedItem)
-                Rayfield:Notify({ Title = "Requested", Content = "Asked server to drop "..selectedItem, Duration = 2 })
+                Rayfield:Notify({Title="Requested", Content="Requested server to drop "..selectedItem, Duration=2})
                 return
             end
-
-            -- fallback: look for tool in backpack
             local backpack = player:FindFirstChild("Backpack")
-            local tool = backpack and backpack:FindFirstChild(selectedItem)
-            if tool then
-                local clone = tool:Clone()
-                clone.Parent = workspace
-                if clone:IsA("Model") and clone.PrimaryPart then
-                    clone:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0,0,-3))
-                elseif clone:IsA("BasePart") then
-                    clone.CFrame = hrp.CFrame * CFrame.new(0,0,-3)
-                end
-                tool:Destroy()
-                Rayfield:Notify({ Title = "Dropped", Content = selectedItem, Duration = 2 })
-            else
-                Rayfield:Notify({ Title = "Not found", Content = "Item not in your Backpack", Duration = 2 })
-            end
+            if not backpack then Rayfield:Notify({Title="No Backpack", Content="Backpack missing", Duration=2}); return end
+            local tool = backpack:FindFirstChild(selectedItem)
+            if not tool then Rayfield:Notify({Title="Not Found", Content="Item not in backpack", Duration=2); return end
+            -- simple drop: clone to world near player and destroy original
+            local clone = tool:Clone()
+            clone.Parent = workspace
+            if clone:IsA("Model") and clone.PrimaryPart then clone:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0,0,-3))
+            elseif clone:IsA("BasePart") then clone.CFrame = hrp.CFrame * CFrame.new(0,0,-3) end
+            tool:Destroy()
+            Rayfield:Notify({Title="Dropped", Content=selectedItem, Duration=1.5})
         end
     })
 
-    -- Speed slider
-    Tab:CreateSlider({
-        Name = "Walk Speed",
+    mainTab:CreateButton({
+        Name = "Drop All Tools (Backpack -> World)",
+        Callback = function()
+            local backpack = player:FindFirstChild("Backpack")
+            if not backpack then Rayfield:Notify({Title="No Backpack", Content="Backpack missing", Duration=2}); return end
+            for _, item in ipairs(backpack:GetChildren()) do
+                local clone = item:Clone()
+                clone.Parent = workspace
+                if clone:IsA("Model") and clone.PrimaryPart then clone:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0,0,-3))
+                elseif clone:IsA("BasePart") then clone.CFrame = hrp.CFrame * CFrame.new(0,0,-3) end
+                item:Destroy()
+                task.wait(0.03)
+            end
+            Rayfield:Notify({Title="Dropped", Content="All items dropped", Duration=2})
+        end
+    })
+
+    ----------------------------
+    -- Auto Collect Food
+    ----------------------------
+    local autoCollect = false
+    mainTab:CreateToggle({
+        Name = "Auto Collect Food",
+        CurrentValue = false,
+        Callback = function(state) autoCollect = state end
+    })
+    mainTab:CreateSlider({
+        Name = "Auto Collect Radius",
+        Range = {4, 120},
+        Increment = 1,
+        CurrentValue = 30,
+        Suffix = "studs",
+        Callback = function(val) -- stored by closure if needed
+        end
+    })
+
+    spawn(function()
+        while true do
+            task.wait(0.7)
+            if autoCollect then
+                if RequestCollectFood then
+                    RequestCollectFood:FireServer(30)
+                else
+                    -- client-side: teleport near nearby food and trigger prompts
+                    local mine = hrp.Position
+                    for _, f in ipairs(foodFolder:GetChildren()) do
+                        local pos = (f:IsA("Model") and f.PrimaryPart and f.PrimaryPart.Position) or (f:IsA("BasePart") and f.Position)
+                        if pos and (pos - mine).Magnitude <= 60 then
+                            local old = hrp.CFrame
+                            hrp.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
+                            task.wait(0.15)
+                            triggerProximityPromptOn(f)
+                            task.wait(0.12)
+                            hrp.CFrame = old
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    ----------------------------
+    -- WalkSpeed
+    ----------------------------
+    mainTab:CreateSlider({
+        Name = "WalkSpeed",
         Range = {8, 200},
         Increment = 1,
         CurrentValue = hum.WalkSpeed or 16,
-        Suffix = "studs/s",
-        Callback = function(val)
-            if hum and hum.Parent then hum.WalkSpeed = val end
-        end
+        Callback = function(val) if hum and hum.Parent then hum.WalkSpeed = val end end
     })
 
-    -- Fly
-    local flying = false
-    local flySpeed = 60
-    Tab:CreateToggle({
-        Name = "Fly (WASD, Space up, LShift down)",
+    ----------------------------
+    -- Noclip
+    ----------------------------
+    local noclipEnabled = false
+    local noclipConn = nil
+    mainTab:CreateToggle({
+        Name = "Noclip",
         CurrentValue = false,
         Callback = function(state)
-            flying = state
-            if not state then
-                -- stop
-                pcall(function() hum.PlatformStand = false end)
+            noclipEnabled = state
+            if noclipEnabled then
+                noclipConn = RunService.Stepped:Connect(function()
+                    if player.Character then
+                        for _, part in ipairs(player.Character:GetDescendants()) do
+                            if part:IsA("BasePart") and part.CanCollide then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            else
+                if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
             end
         end
     })
 
-    Tab:CreateSlider({
+    ----------------------------
+    -- Fly (client-side)
+    ----------------------------
+    local flying = false
+    local flySpeed = 80
+    settingsTab:CreateToggle({
+        Name = "Fly (E ascend, Q descend)",
+        CurrentValue = false,
+        Callback = function(state) flying = state end
+    })
+    settingsTab:CreateSlider({
         Name = "Fly Speed",
-        Range = {10, 300},
+        Range = {10, 400},
         Increment = 1,
         CurrentValue = flySpeed,
-        Callback = function(v) flySpeed = v end
+        Callback = function(val) flySpeed = val end
     })
 
-    -- Fly loop (client-side)
     local bv = nil
-    local asc = 0
+    local ascend = 0
     UserInputService.InputBegan:Connect(function(inp, gp)
         if gp then return end
-        if inp.KeyCode == Enum.KeyCode.E then asc = 1 end
-        if inp.KeyCode == Enum.KeyCode.Q then asc = -1 end
+        if inp.KeyCode == Enum.KeyCode.E then ascend = 1 end
+        if inp.KeyCode == Enum.KeyCode.Q then ascend = -1 end
     end)
     UserInputService.InputEnded:Connect(function(inp, gp)
         if gp then return end
-        if inp.KeyCode == Enum.KeyCode.E and asc == 1 then asc = 0 end
-        if inp.KeyCode == Enum.KeyCode.Q and asc == -1 then asc = 0 end
+        if inp.KeyCode == Enum.KeyCode.E and ascend == 1 then ascend = 0 end
+        if inp.KeyCode == Enum.KeyCode.Q and ascend == -1 then ascend = 0 end
     end)
 
     RunService.RenderStepped:Connect(function()
@@ -277,7 +350,6 @@ local success, err = pcall(function()
             if not bv or not bv.Parent then
                 bv = Instance.new("BodyVelocity")
                 bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-                bv.Velocity = Vector3.new(0,0,0)
                 bv.Parent = hrp
                 hum.PlatformStand = true
             end
@@ -287,68 +359,156 @@ local success, err = pcall(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - cam.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - cam.CFrame.RightVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + cam.CFrame.RightVector end
-            local vertical = asc
-            local finalVel = (moveVec.Unit ~= moveVec.Unit) and (moveVec * flySpeed) or (moveVec.Unit * flySpeed)
-            if moveVec.Magnitude == 0 then finalVel = Vector3.new(0,0,0) end
-            bv.Velocity = finalVel + Vector3.new(0, vertical * flySpeed, 0)
+            local finalVel = Vector3.new(0,0,0)
+            if moveVec.Magnitude > 0 then finalVel = moveVec.Unit * flySpeed end
+            bv.Velocity = finalVel + Vector3.new(0, ascend * flySpeed, 0)
         else
-            if bv then bv:Destroy(); bv = nil end
+            if bv then bv:Destroy(); bv = nil; hum.PlatformStand = false end
         end
     end)
 
-    -- Auto collect food: prefer server RemoteEvent; fallback to teleport+prompt
-    local autoCollect = false
-    Tab:CreateToggle({
-        Name = "Auto Collect Food",
+    ----------------------------
+    -- Monsters ESP (Highlight)
+    ----------------------------
+    local espEnabled = false
+    local espConn = nil
+    mainTab:CreateToggle({
+        Name = "Monsters ESP",
         CurrentValue = false,
-        Callback = function(v) autoCollect = v end
-    })
-
-    Tab:CreateSlider({
-        Name = "Collect Radius (client-side scan)",
-        Range = {4, 120},
-        Increment = 1,
-        CurrentValue = 20,
-        Callback = function(val) end
-    })
-
-    spawn(function()
-        while true do
-            task.wait(0.8)
-            if autoCollect then
-                if RequestCollectFood then
-                    RequestCollectFood:FireServer(20) -- ask server to collect within 20 studs
-                else
-                    for _, f in ipairs(foodFolder:GetChildren()) do
-                        local pos
-                        if f:IsA("Model") and f.PrimaryPart then pos = f.PrimaryPart.Position
-                        elseif f:IsA("BasePart") then pos = f.Position end
-                        if pos and (pos - hrp.Position).Magnitude <= 50 then
-                            local old = hrp.CFrame
-                            hrp.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
-                            task.wait(0.15)
-                            TriggerPrompt(f)
-                            task.wait(0.1)
-                            hrp.CFrame = old
+        Callback = function(state)
+            espEnabled = state
+            if espEnabled then
+                espConn = RunService.Heartbeat:Connect(function()
+                    -- find any folder with "Night" in name (as previous script did), else look for typical enemy folders
+                    local nightFolder = nil
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        if obj:IsA("Folder") and string.find(obj.Name, "Night") then nightFolder = obj; break end
+                    end
+                    if not nightFolder then
+                        -- fallback: scan for models with HumanoidRootPart and "Enemy" in name
+                        for _, obj in ipairs(workspace:GetChildren()) do
+                            if obj:IsA("Model") and obj:FindFirstChild("HumanoidRootPart") and string.find(obj.Name, "Enemy") then
+                                nightFolder = workspace; break
+                            end
                         end
                     end
+                    if nightFolder then
+                        for _, lurker in ipairs(nightFolder:GetChildren()) do
+                            if lurker:IsA("Model") and lurker:FindFirstChild("HumanoidRootPart") then
+                                if not lurker:FindFirstChild("DN_Highlight") then
+                                    local h = Instance.new("Highlight")
+                                    h.Name = "DN_Highlight"
+                                    h.Parent = lurker
+                                end
+                            end
+                        end
+                    end
+                end)
+            else
+                if espConn then espConn:Disconnect(); espConn = nil end
+                -- remove any existing highlights
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("Highlight") and v.Name == "DN_Highlight" then pcall(function() v:Destroy() end) end
                 end
             end
         end
-    end)
+    })
 
-    -- Notify loaded
-    Rayfield:Notify({ Title = "Loaded", Content = "Developer panel ready (items, food)", Duration = 4 })
+    ----------------------------
+    -- Teleport tab (bunker / market / to player)
+    ----------------------------
+    local bunkerName = player:GetAttribute("AssignedBunkerName")
+    tpTab:CreateButton({
+        Name = "To Bunker (Assigned)",
+        Callback = function()
+            if not bunkerName then Rayfield:Notify({Title="No Bunker", Content="AssignedBunkerName not set", Duration=2}); return end
+            local bunkers = workspace:FindFirstChild("Bunkers")
+            if not bunkers then Rayfield:Notify({Title="No Bunkers", Content="workspace.Bunkers missing", Duration=2}); return end
+            local bunker = bunkers:FindFirstChild(bunkerName)
+            if not bunker then Rayfield:Notify({Title="Invalid", Content="Assigned bunker not found", Duration=2}); return end
+            local spawn = bunker:FindFirstChild("SpawnLocation") or bunker:FindFirstChildWhichIsA("BasePart")
+            if spawn then hrp.CFrame = spawn.CFrame else Rayfield:Notify({Title="No Spawn", Content="Bunker spawn missing", Duration=2}) end
+        end
+    })
+    tpTab:CreateButton({
+        Name = "To Market (example)",
+        Callback = function() hrp.CFrame = CFrame.new(143,5,-118) end
+    })
+    tpTab:CreateBox({
+        Name = "Teleport to player (name)",
+        Placeholder = "Player name or part of it",
+        Callback = function(text, focusLost)
+            if not focusLost then return end
+            local lower = text:lower()
+            for _, pl in ipairs(Players:GetPlayers()) do
+                if string.find(pl.Name:lower(), lower) or string.find(pl.DisplayName:lower(), lower) then
+                    if pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+                        hrp.CFrame = pl.Character.HumanoidRootPart.CFrame
+                        return
+                    end
+                end
+            end
+            Rayfield:Notify({Title="Not found", Content="Player not found", Duration=2})
+        end
+    })
+
+    ----------------------------
+    -- Quick utilities
+    ----------------------------
+    mainTab:CreateButton({
+        Name = "Collect All Food (instant-ish)",
+        Callback = function()
+            local old = hrp.CFrame
+            for _, f in ipairs(workspace:GetChildren()) do
+                if f:IsA("Tool") or (f:IsA("Model") and f:FindFirstChild("Handle")) then
+                    local handle = f:FindFirstChild("Handle") or (f.PrimaryPart and f.PrimaryPart)
+                    if handle then
+                        hrp.CFrame = handle.CFrame * CFrame.new(0,5,0)
+                        task.wait(0.18)
+                        triggerProximityPromptOn(f)
+                    end
+                end
+            end
+            task.wait(0.2)
+            hrp.CFrame = old
+        end
+    })
+
+    mainTab:CreateButton({
+        Name = "Drop All Inventory (kill to respawn at same pos)",
+        Callback = function()
+            -- move tools to character then kill to drop (works if game drops on death)
+            for _, it in ipairs(player.Backpack:GetChildren()) do
+                it.Parent = player.Character
+                task.wait(0.03)
+            end
+            -- kill
+            pcall(function() player.Character:FindFirstChildOfClass("Humanoid").Health = 0 end)
+            -- try to respawn at same pos when character comes back
+            local lastPos = hrp.CFrame
+            spawn(function()
+                player.CharacterAdded:Wait()
+                local newChar = player.Character or player.CharacterAdded:Wait()
+                local newHrp = newChar:WaitForChild("HumanoidRootPart", 5)
+                if newHrp and lastPos then task.wait(0.6); newHrp.CFrame = lastPos end
+            end)
+        end
+    })
+
+    ----------------------------
+    -- Final notify
+    ----------------------------
+    Rayfield:Notify({Title="Loaded", Content="Dangerous Night Dev Toolkit v3 is ready", Duration=4})
 
 end)
 
-if not success then
-    warn("Script failed to initialize: ", err)
-    -- Try minimal Rayfield check so UI isn't totally blank
-    local ok, _ = pcall(function()
+if not ok then
+    warn("Dev Toolkit failed to initialize: ", err)
+    -- Try to show minimal Rayfield message
+    pcall(function()
         local r = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
-        local w = r:CreateWindow({ Name = "Dangerous Night Dev Panel (Error)"; LoadingTitle = "Error"; LoadingSubtitle = tostring(err); ConfigurationSaving = { Enabled = false } })
+        local w = r:CreateWindow({Name="Dev Toolkit Error", LoadingTitle="Error", LoadingSubtitle=tostring(err), ConfigurationSaving={Enabled=false}})
         local t = w:CreateTab("Error")
-        t:CreateLabel("See Output for details. Error: "..tostring(err))
+        t:CreateLabel("See Output for details: "..tostring(err))
     end)
 end
