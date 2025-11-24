@@ -1,189 +1,255 @@
---//===========================
---//  Dangerous Night Dev Panel
---//  All-in-One Script (Rayfield)
---//===========================
-
---== Load Rayfield ==
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
-local Window = Rayfield:CreateWindow({
-    Name = "Dangerous Night Developer Panel",
-    LoadingTitle = "Initializing…",
-    LoadingSubtitle = "Developer Tools",
-    ConfigurationSaving = {
-        Enabled = false
-    }
-})
-
---//===========================
---// VARIABLES
---//===========================
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local hum = char:WaitForChild("Humanoid")
-
-local ItemsFolder = workspace:WaitForChild("Items") -- ubah jika folder beda
-local FoodsFolder = workspace:WaitForChild("Foods") -- folder food
-
-local FlyEnabled = false
-local AutoFood = false
-local SelectedItem = nil
-
---//===========================
---// UPDATE ITEM LIST
---//===========================
-local function getItemList()
-    local list = {}
-
-    for _, item in ipairs(ItemsFolder:GetChildren()) do
-        table.insert(list, item.Name)
-    end
-
-    return list
-end
-
---//===========================
---// PANEL UTAMA
---//===========================
-local MainTab = Window:CreateTab("Main")
-
-local ItemDropdown = MainTab:CreateDropdown({
-    Name = "Pilih Item",
-    Options = getItemList(),
-    CurrentOption = "",
-    Callback = function(option)
-        SelectedItem = option
-    end
-})
-
-MainTab:CreateButton({
-    Name = "Refresh Daftar Item",
-    Callback = function()
-        ItemDropdown:Refresh(getItemList(), true)
-    end
-})
-
---//===========================
---// PICKUP ITEM
---//===========================
-MainTab:CreateButton({
-    Name = "Pickup Item Terpilih",
-    Callback = function()
-        if not SelectedItem then return end
-
-        local target = ItemsFolder:FindFirstChild(SelectedItem)
-        if target then
-            hrp.CFrame = target.CFrame * CFrame.new(0, 3, 0)
-            task.wait(.4)
-            fireproximityprompt(target:FindFirstChildWhichIsA("ProximityPrompt"))
-        end
-    end
-})
-
---//===========================
---// AUTO FOOD COLLECT
---//===========================
-MainTab:CreateToggle({
-    Name = "Auto Collect Food",
-    CurrentValue = false,
-    Callback = function(v)
-        AutoFood = v
-    end
-})
-
-task.spawn(function()
-    while true do
-        task.wait(.2)
-        if AutoFood then
-            for _, f in ipairs(FoodsFolder:GetChildren()) do
-                if f:FindFirstChildWhichIsA("ProximityPrompt") then
-                    hrp.CFrame = f.CFrame * CFrame.new(0, 3, 0)
-                    task.wait(.15)
-                    fireproximityprompt(f:FindFirstChildWhichIsA("ProximityPrompt"))
-                end
-            end
-        end
-    end
-end)
-
---//===========================
---// SPEED CONTROL
---//===========================
-MainTab:CreateSlider({
-    Name = "Player Speed",
-    Range = {16, 120},
-    Increment = 1,
-    CurrentValue = 16,
-    Callback = function(val)
-        hum.WalkSpeed = val
-    end
-})
-
---//===========================
---// FLY MODE
---//===========================
-MainTab:CreateToggle({
-    Name = "Fly Mode",
-    CurrentValue = false,
-    Callback = function(v)
-        FlyEnabled = v
-    end
-})
-
--- basic fly loop
-task.spawn(function()
-    while true do
-        task.wait()
-        if FlyEnabled then
-            hum.PlatformStand = true
-            local move = Vector3.zero
-
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
-                move = move + hrp.CFrame.LookVector
-            end
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
-                move = move - hrp.CFrame.LookVector
-            end
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
-                move = move - hrp.CFrame.RightVector
-            end
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
-                move = move + hrp.CFrame.RightVector
-            end
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
-                move = move + Vector3.new(0, 1, 0)
-            end
-            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then
-                move = move - Vector3.new(0, 1, 0)
-            end
-
-            hrp.Velocity = move * 50
-        else
-            hum.PlatformStand = false
-        end
-    end
-end)
-
---//===========================
---// DROP ITEM
---//===========================
-MainTab:CreateButton({
-    Name = "Drop Item di Inventory",
-    Callback = function()
-        local inv = player:WaitForChild("Backpack")
-
-        for _, tool in ipairs(inv:GetChildren()) do
-            tool.Parent = char
-            task.wait(.1)
-            tool:Deactivate()
-            hum:UnequipTools()
-        end
-    end
-})
+--// Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
 
 Rayfield:Notify({
     Title = "Loaded",
-    Content = "Developer panel siap!",
-    Duration = 4
+    Content = "Dangerous Night Utility Loaded Successfully!",
+    Duration = 5
 })
+
+local Window = Rayfield:CreateWindow({
+   Name = "Dangerous Night | Utility",
+   LoadingTitle = "Dangerous Night",
+   LoadingSubtitle = "Rayfield UI",
+})
+
+local m = Window:CreateTab("Main")
+local t = Window:CreateTab("Teleport")
+local s = Window:CreateTab("Settings")
+
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local bunkerName = plr:GetAttribute("AssignedBunkerName")
+
+--// Noclip
+m:CreateToggle({
+    Name = "Noclip",
+    CurrentValue = false,
+    Callback = function(b)
+        getgenv().noclip = b
+        if b then
+            Noclipping = game:GetService("RunService").Stepped:Connect(function()
+                if plr.Character then
+                    for _, v in pairs(plr.Character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if Noclipping then Noclipping:Disconnect() end
+        end
+    end,
+})
+
+--// Walkspeed
+m:CreateInput({
+    Name = "WalkSpeed",
+    PlaceholderText = "16",
+    OnEnter = true,
+    Callback = function(ws)
+        if tonumber(ws) and plr.Character then
+            plr.Character:FindFirstChild("Humanoid").WalkSpeed = tonumber(ws)
+        end
+    end,
+})
+
+--// Collect All Food
+m:CreateButton({
+    Name = "Collect All Food",
+    Callback = function()
+        local lastPos = plr.Character.HumanoidRootPart.CFrame
+
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Tool") then
+                local handle = v:FindFirstChild("Handle")
+                local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
+
+                if prompt then
+                    plr.Character.HumanoidRootPart.CFrame = handle.CFrame * CFrame.new(0, 5, 0)
+                    task.wait(0.25)
+                    fireproximityprompt(prompt)
+                end
+            end
+        end
+
+        task.wait(0.2)
+        plr.Character.HumanoidRootPart.CFrame = lastPos
+    end,
+})
+
+--// Drop Food
+m:CreateButton({
+    Name = "Drop All Food",
+    Callback = function()
+        local lastPos = plr.Character.HumanoidRootPart.CFrame
+
+        for _, tool in pairs(plr.Backpack:GetChildren()) do
+            tool.Parent = plr.Character
+        end
+
+        task.wait(0.2)
+        plr.Character:FindFirstChildOfClass("Humanoid").Health = 0
+
+        plr.CharacterAdded:Wait()
+        task.wait(0.4)
+        plr.Character:WaitForChild("HumanoidRootPart").CFrame = lastPos
+    end,
+})
+
+--// Furniture System
+local selected = nil
+
+local function ReturnFurniture()
+    local Names = {}
+    for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
+        if item:IsA("Folder") then
+            for _, model in pairs(item:GetChildren()) do
+                if model:IsA("Model") then
+                    table.insert(Names, model.Name)
+                end
+            end
+        elseif item:IsA("Model") then
+            table.insert(Names, item.Name)
+        end
+    end
+    return Names
+end
+
+local function GetFurniture()
+    for _, folder in pairs(workspace.Wyposazenie:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, model in pairs(folder:GetChildren()) do
+                if model:IsA("Model") and model.Name == selected then
+                    game.ReplicatedStorage.PickupItemEvent:FireServer(model)
+                    return true
+                end
+            end
+        elseif folder:IsA("Model") and folder.Name == selected then
+            game.ReplicatedStorage.PickupItemEvent:FireServer(folder)
+            return true
+        end
+    end
+    return false
+end
+
+m:CreateDropdown({
+    Name = "Select Furniture",
+    Options = ReturnFurniture(),
+    Callback = function(v)
+        selected = v
+    end,
+})
+
+m:CreateButton({
+    Name = "Bring Selected Furniture",
+    Callback = function()
+        if selected then GetFurniture() end
+    end,
+})
+
+--// Sound Spam
+m:CreateToggle({
+    Name = "Sound Spam",
+    CurrentValue = false,
+    Callback = function(b)
+        getgenv().sound_spam = b
+        task.spawn(function()
+            while sound_spam do
+                local snd = game.ReplicatedStorage:WaitForChild("SoundEvent")
+                snd:FireServer("Drink")
+                snd:FireServer("Eat")
+                task.wait()
+            end
+        end)
+    end,
+})
+
+--// Monster ESP
+m:CreateToggle({
+    Name = "Monsters ESP",
+    CurrentValue = false,
+    Callback = function(b)
+        getgenv().lurker_esp = b
+
+        local function findNightFolder()
+            for _, obj in pairs(workspace:GetChildren()) do
+                if obj:IsA("Folder") and obj.Name:find("Night") then
+                    return obj
+                end
+            end
+        end
+
+        if b then
+            task.spawn(function()
+                while lurker_esp do
+                    local f = findNightFolder()
+                    if f then
+                        for _, m in pairs(f:GetChildren()) do
+                            if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") then
+                                if not m:FindFirstChild("Highlight") then
+                                    Instance.new("Highlight", m)
+                                end
+                            end
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            local f = findNightFolder()
+            if f then
+                for _, m in pairs(f:GetChildren()) do
+                    local h = m:FindFirstChild("Highlight")
+                    if h then h:Destroy() end
+                end
+            end
+        end
+    end,
+})
+
+--// TELEPORT
+t:CreateButton({
+    Name = "To Bunker",
+    Callback = function()
+        plr.Character.HumanoidRootPart.CFrame =
+            workspace.Bunkers[bunkerName].SpawnLocation.CFrame
+    end,
+})
+
+t:CreateButton({
+    Name = "To Market",
+    Callback = function()
+        plr.Character.HumanoidRootPart.CFrame = CFrame.new(143, 5, -118)
+    end,
+})
+
+t:CreateInput({
+    Name = "Teleport To Player",
+    PlaceholderText = "Player Name",
+    OnEnter = true,
+    Callback = function(name)
+        local lower = name:lower()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Name:lower():find(lower) or p.DisplayName:lower():find(lower) then
+                plr.Character.HumanoidRootPart.CFrame =
+                    p.Character.HumanoidRootPart.CFrame
+                return
+            end
+        end
+    end,
+})
+
+--// SETTINGS
+s:CreateLabel("Press LeftControl to Hide UI")
+s:CreateLabel("~ t.me/arceusxscripts")
+
+s:CreateButton({
+    Name = "Destroy GUI",
+    Callback = function()
+        Rayfield:Destroy()
+    end,
+})
+
+Rayfield:LoadConfiguration()
