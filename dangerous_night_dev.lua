@@ -1,180 +1,270 @@
---========================================
--- SIMPLE CLEAN UI (DRAGGABLE + TABS)
---========================================
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
 
--- Destroy old UI
-if game.CoreGui:FindFirstChild("DN_UI") then
-    game.CoreGui.DN_UI:Destroy()
+local m = lib:Window("Main")
+local t = lib:Window("Teleport")
+local s = lib:Window("Settings")
+
+local players = game:GetService("Players")
+local plr = players.LocalPlayer
+
+local function GetChar()
+    return plr.Character or plr.CharacterAdded:Wait()
 end
 
--- Create ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "DN_UI"
-gui.Parent = game.CoreGui
-gui.ResetOnSpawn = false
+local function GetHRP()
+    local char = GetChar()
+    return char:WaitForChild("HumanoidRootPart", 2)
+end
 
--- Main Frame
-local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 450, 0, 300)
-main.Position = UDim2.new(0.3, 0, 0.25, 0)
-main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-main.BorderSizePixel = 0
-main.Active = true
-main.Draggable = true
-main.Parent = gui
+local function GetHum()
+    local char = GetChar()
+    return char:WaitForChild("Humanoid", 2)
+end
 
--- Top Bar
-local top = Instance.new("Frame")
-top.Size = UDim2.new(1, 0, 0, 35)
-top.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-top.BorderSizePixel = 0
-top.Parent = main
+local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -10, 1, 0)
-title.Position = UDim2.new(0, 5, 0, 0)
-title.Text = "Dangerous Night"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.BackgroundTransparency = 1
-title.Parent = top
+---------------------------------------------------------------------
+-- Noclip
+---------------------------------------------------------------------
+m:Toggle("Noclip", false, function(state)
+    getgenv().noclip = state
 
--- Tab Buttons
-local tabHolder = Instance.new("Frame")
-tabHolder.Size = UDim2.new(0, 120, 1, -35)
-tabHolder.Position = UDim2.new(0, 0, 0, 35)
-tabHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-tabHolder.BorderSizePixel = 0
-tabHolder.Parent = main
-
-local pages = Instance.new("Frame")
-pages.Size = UDim2.new(1, -120, 1, -35)
-pages.Position = UDim2.new(0, 120, 0, 35)
-pages.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-pages.BorderSizePixel = 0
-pages.Parent = main
-
--- Function for creating tabs
-local function CreateTab(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.Parent = tabHolder
-
-    local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.CanvasSize = UDim2.new(0, 0, 0, 500)
-    page.ScrollBarThickness = 6
-    page.Visible = false
-    page.BackgroundTransparency = 1
-    page.Parent = pages
-
-    btn.MouseButton1Click:Connect(function()
-        for _, p in pairs(pages:GetChildren()) do
-            if p:IsA("ScrollingFrame") then p.Visible = false end
+    if state then
+        if getgenv().noclipConn then
+            getgenv().noclipConn:Disconnect()
         end
-        for _, b in pairs(tabHolder:GetChildren()) do
-            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(30,30,30) end
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        page.Visible = true
-    end)
-
-    return page
-end
-
--- Create Tabs
-local mainTab = CreateTab("Main")
-local espTab = CreateTab("ESP")
-local tpTab = CreateTab("Teleport")
-
-mainTab.Visible = true  -- default tab
-
--- Helper: Add button element
-local function AddButton(parent, text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -20, 0, 40)
-    btn.Position = UDim2.new(0, 10, 0, #parent:GetChildren()*45)
-    btn.Text = text
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Parent = parent
-    btn.MouseButton1Click:Connect(callback)
-end
-
-------------------------------------------------------
--- MAIN TAB FEATURES
-------------------------------------------------------
-
-local plr = game.Players.LocalPlayer
-
-AddButton(mainTab, "Toggle Noclip", function()
-    getgenv().noclip = not getgenv().noclip
-    if noclip then
-        if getgenv()._nc then getgenv()._nc:Disconnect() end
-        getgenv()._nc = game.RunService.Stepped:Connect(function()
-            if plr.Character then
-                for _, v in pairs(plr.Character:GetDescendants()) do
-                    if v:IsA("BasePart") then v.CanCollide = false end
+        
+        getgenv().noclipConn = game:GetService("RunService").Stepped:Connect(function()
+            local char = plr.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
                 end
             end
         end)
     else
-        if getgenv()._nc then getgenv()._nc:Disconnect() end
-    end
-end)
-
-AddButton(mainTab, "Collect All Food", function()
-    for _, food in pairs(workspace:GetChildren()) do
-        if food:IsA("Tool") and food:FindFirstChild("Handle") then
-            local prompt = food.Handle:FindFirstChildOfClass("ProximityPrompt")
-            if prompt then fireproximityprompt(prompt) end
+        if getgenv().noclipConn then
+            getgenv().noclipConn:Disconnect()
+            getgenv().noclipConn = nil
         end
     end
 end)
 
-------------------------------------------------------
--- ESP TAB
-------------------------------------------------------
+---------------------------------------------------------------------
+-- WalkSpeed
+---------------------------------------------------------------------
+m:Box("WalkSpeed", function(ws)
+    ws = tonumber(ws)
+    if ws and GetHum() then
+        GetHum().WalkSpeed = ws
+    end
+end)
 
-AddButton(espTab, "Monster ESP", function()
-    getgenv().esp = not getgenv().esp
+---------------------------------------------------------------------
+-- Collect All Food
+---------------------------------------------------------------------
+m:Button("Collect All Food", function()
+    local hrp = GetHRP()
+    if not hrp then return end
 
-    while esp do
-        for _, f in pairs(workspace:GetChildren()) do
-            if f:IsA("Folder") and f.Name:match("Night") then
-                for _, m in pairs(f:GetChildren()) do
-                    if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") then
-                        if not m:FindFirstChild("Highlight") then
-                            Instance.new("Highlight", m)
+    local lastPos = hrp.CFrame
+
+    for _, food in ipairs(workspace:GetChildren()) do
+        if food:IsA("Tool") then
+            local handle = food:FindFirstChild("Handle")
+            local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
+
+            if handle and prompt then
+                hrp.CFrame = handle.CFrame + Vector3.new(0, 5, 0)
+                task.wait(0.2)
+                pcall(function()
+                    fireproximityprompt(prompt)
+                end)
+            end
+        end
+    end
+
+    task.wait(0.2)
+    hrp.CFrame = lastPos
+end)
+
+---------------------------------------------------------------------
+-- Drop All Food
+---------------------------------------------------------------------
+m:Button("Drop All Food", function()
+    local hrp = GetHRP()
+    if not hrp then return end
+    local lastPos = hrp.CFrame
+
+    -- Force equip semua food
+    for _, item in ipairs(plr.Backpack:GetChildren()) do
+        item.Parent = plr.Character
+    end
+
+    task.wait(0.2)
+    local hum = GetHum()
+    if hum then hum.Health = 0 end
+
+    task.spawn(function()
+        plr.CharacterAdded:Wait()
+        local newHRP = GetHRP()
+        if newHRP then
+            task.wait(0.5)
+            newHRP.CFrame = lastPos
+        end
+    end)
+end)
+
+---------------------------------------------------------------------
+-- Furniture System
+---------------------------------------------------------------------
+local selected = nil
+
+local function ReturnFurniture()
+    local list = {}
+    for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if x:IsA("Folder") then
+            for _, md in ipairs(x:GetChildren()) do
+                if md:IsA("Model") and not table.find(list, md.Name) then
+                    table.insert(list, md.Name)
+                end
+            end
+        elseif x:IsA("Model") and not table.find(list, x.Name) then
+            table.insert(list, x.Name)
+        end
+    end
+    return list
+end
+
+local function GetFurniture()
+    for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if x:IsA("Folder") then
+            for _, md in ipairs(x:GetChildren()) do
+                if md:IsA("Model") and md.Name == selected then
+                    game.ReplicatedStorage.PickupItemEvent:FireServer(md)
+                    return true
+                end
+            end
+        elseif x:IsA("Model") and x.Name == selected then
+            game.ReplicatedStorage.PickupItemEvent:FireServer(x)
+            return true
+        end
+    end
+    return false
+end
+
+m:Dropdown("Selected Furniture", ReturnFurniture(), function(opt)
+    selected = opt
+end)
+
+m:Button("Bring Selected Furniture", function()
+    if selected then GetFurniture() end
+end)
+
+---------------------------------------------------------------------
+-- Sound Spam
+---------------------------------------------------------------------
+m:Toggle("Sound Spam", false, function(state)
+    getgenv().sound_spam = state
+
+    task.spawn(function()
+        while sound_spam do
+            pcall(function()
+                game.ReplicatedStorage.SoundEvent:FireServer("Drink")
+                game.ReplicatedStorage.SoundEvent:FireServer("Eat")
+            end)
+            task.wait()
+        end
+    end)
+end)
+
+---------------------------------------------------------------------
+-- Monster ESP
+---------------------------------------------------------------------
+local function findNightFolder()
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Folder") and obj.Name:match("Night") then
+            return obj
+        end
+    end
+    return nil
+end
+
+m:Toggle("Monsters ESP", false, function(state)
+    getgenv().esp = state
+
+    if state then
+        task.spawn(function()
+            while esp do
+                local folder = findNightFolder()
+                if folder then
+                    for _, lurker in ipairs(folder:GetChildren()) do
+                        if lurker:IsA("Model") and lurker:FindFirstChild("HumanoidRootPart") then
+                            if not lurker:FindFirstChild("Highlight") then
+                                Instance.new("Highlight", lurker)
+                            end
                         end
                     end
                 end
+                task.wait(1)
+            end
+        end)
+    else
+        local folder = findNightFolder()
+        if folder then
+            for _, lurker in ipairs(folder:GetChildren()) do
+                local h = lurker:FindFirstChild("Highlight")
+                if h then h:Destroy() end
             end
         end
-        task.wait(1)
-    end
-
-    for _, m in pairs(workspace:GetDescendants()) do
-        if m:IsA("Highlight") then m:Destroy() end
     end
 end)
 
-------------------------------------------------------
--- TELEPORT TAB
-------------------------------------------------------
-
-AddButton(tpTab, "Teleport: Bunker", function()
-    local bunker = plr:GetAttribute("AssignedBunkerName")
-    if workspace.Bunkers[bunker] then
-        plr.Character.HumanoidRootPart.CFrame = workspace.Bunkers[bunker].SpawnLocation.CFrame
+---------------------------------------------------------------------
+-- TELEPORT MENU
+---------------------------------------------------------------------
+t:Button("to Bunker", function()
+    local hrp = GetHRP()
+    if hrp and bunkerName then
+        local bunker = workspace:FindFirstChild("Bunkers")
+        if bunker and bunker:FindFirstChild(bunkerName) then
+            hrp.CFrame = bunker[bunkerName].SpawnLocation.CFrame
+        end
     end
 end)
 
+t:Button("to Market", function()
+    local hrp = GetHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(143, 5, -118)
+    end
+end)
+
+t:Box("to Player", function(txt, enter)
+    if not enter then return end
+    txt = txt:lower()
+
+    for _, p in ipairs(players:GetPlayers()) do
+        if p ~= plr and (p.Name:lower():find(txt) or p.DisplayName:lower():find(txt)) then
+            local hrp = GetHRP()
+            local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and target then
+                hrp.CFrame = target.CFrame
+            end
+            return
+        end
+    end
+end)
+
+---------------------------------------------------------------------
+-- SETTINGS
+---------------------------------------------------------------------
+s:Label("Press LeftControl to Hide UI", Color3.fromRGB(127, 143, 166))
+s:Label("~ t.me/arceusxscripts", Color3.fromRGB(127, 143, 166))
+s:Button("Destroy Gui", function()
+	lib:Destroy()
+end)
+
+lib:Keybind("LeftControl")
