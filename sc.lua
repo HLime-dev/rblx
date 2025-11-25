@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC1",
-   LoadingTitle = "HaeX SC1",
+   Name = "DN SC3",
+   LoadingTitle = "HaeX SC3",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -222,108 +222,158 @@ UtilityTab:CreateToggle({
 
 
 -- Furniture GUI
+-- Furniture GUI (FIXED)
 MainTab:CreateButton({
     Name = "Open Furniture GUI",
     Callback = function()
+
         local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
         local m = lib:Window("Furniture GUI")
+
         local selected = nil
 
         -----------------------------------------------------------
-        -- RETURN FURNITURE (Market Only)
+        -- Market Folder
         -----------------------------------------------------------
+        local function GetMarketFolder()
+            return workspace:FindFirstChild("MarketWyposazenie")
+                or workspace:FindFirstChild("MarketWypo")
+                or workspace:FindFirstChild("Wyposazenie")
+        end
+
         -----------------------------------------------------------
--- FOLDER MARKET DETECTION (AMAN)
------------------------------------------------------------
-local function GetMarket()
-    return workspace:FindFirstChild("MarketWyposazenie")
-end
+        -- RETURN FURNITURE LIST
+        -----------------------------------------------------------
+        local function ReturnFurniture()
+            local list = {}
+            local added = {}
 
------------------------------------------------------------
--- RETURN FURNITURE (HANYA MODEL YANG PUNYA PRIMARYPART)
------------------------------------------------------------
-local function ReturnFurniture()
-    local list = {}
-    local added = {}
-    local market = GetMarket()
-    if not market then return list end
+            local market = GetMarketFolder()
+            if not market then return list end
 
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChild("PrimaryPart") then
-            if not added[v.Name] then
-                added[v.Name] = true
-                table.insert(list, v.Name)
+            local function scan(folder)
+                for _, v in ipairs(folder:GetChildren()) do
+                    if v:IsA("Model") then
+                        local part = v:FindFirstChildWhichIsA("BasePart", true)
+                        if part and not added[v.Name] then
+                            added[v.Name] = true
+                            table.insert(list, v.Name)
+                        end
+                    elseif v:IsA("Folder") then
+                        scan(v)
+                    end
+                end
+            end
+
+            scan(market)
+            return list
+        end
+
+        -----------------------------------------------------------
+        -- PICKUP FURNITURE
+        -----------------------------------------------------------
+        local function GetFurniture(sel)
+            if not sel then return false end
+
+            local market = GetMarketFolder()
+            if not market then return false end
+
+            local target = nil
+
+            local function find(folder)
+                for _, v in ipairs(folder:GetChildren()) do
+                    if v:IsA("Model") and v.Name == sel then
+                        target = v
+                        return
+                    elseif v:IsA("Folder") then
+                        find(v)
+                    end
+                end
+            end
+
+            find(market)
+
+            if target then
+                pcall(function()
+                    RS.PickupItemEvent:FireServer(target)
+                end)
+                return true
+            end
+
+            return false
+        end
+
+        -----------------------------------------------------------
+        -- TELEPORT TO FURNITURE
+        -----------------------------------------------------------
+        local function TeleportToFurniture(sel)
+            if not sel then return end
+
+            local hrp = GetHRP()
+            if not hrp then return end
+
+            local market = GetMarketFolder()
+            if not market then return end
+
+            local target = nil
+
+            local function find(folder)
+                for _, v in ipairs(folder:GetChildren()) do
+                    if v:IsA("Model") and v.Name == sel then
+                        target = v
+                        return
+                    elseif v:IsA("Folder") then
+                        find(v)
+                    end
+                end
+            end
+
+            find(market)
+
+            if target then
+                local part = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+                end
             end
         end
+
+        -----------------------------------------------------------
+        -- GUI COMPONENTS
+        -----------------------------------------------------------
+
+        local furnList = ReturnFurniture()
+
+        m:Dropdown("Selected Furniture", furnList, function(val)
+            selected = val
+        end)
+
+        m:Button("Refresh Furniture List", function()
+            m:UpdateDropdown("Selected Furniture", ReturnFurniture())
+        end)
+
+        m:Button("Bring Selected Furniture", function()
+            if selected then
+                GetFurniture(selected)
+            else
+                warn("Pilih furniture dulu!")
+            end
+        end)
+
+        m:Button("Teleport to Furniture", function()
+            if selected then
+                TeleportToFurniture(selected)
+            else
+                warn("Pilih furniture dulu!")
+            end
+        end)
+
+        m:Button("Close GUI", function()
+            if m.Destroy then pcall(function() m:Destroy() end) end
+        end)
+
     end
-
-    return list
-end
-
------------------------------------------------------------
--- PICKUP FURNITURE (PRIMARYPART ONLY)
------------------------------------------------------------
-local function GetFurniture(sel)
-    if not sel then return false end
-    local market = GetMarket()
-    if not market then return false end
-
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") and v.Name == sel and v:FindFirstChild("PrimaryPart") then
-            pcall(function()
-                RS.PickupItemEvent:FireServer(v)
-            end)
-            return true
-        end
-    end
-
-    return false
-end
-
------------------------------------------------------------
--- TELEPORT KE FURNITURE (PRIMARYPART)
------------------------------------------------------------
-local function TeleportToFurniture(sel)
-    if not sel then return end
-    local hrp = GetHRP()
-    local market = GetMarket()
-
-    if not hrp or not market then return end
-
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") and v.Name == sel and v:FindFirstChild("PrimaryPart") then
-            hrp.CFrame = v.PrimaryPart.CFrame + Vector3.new(0,5,0)
-            return
-        end
-    end
-end
-
------------------------------------------------------------
--- GUI COMPONENTS
------------------------------------------------------------
-m:Dropdown("Selected Furniture", ReturnFurniture(), function(val)
-    selected = val
-end)
-
-m:Button("Bring Selected Furniture", function()
-    if selected then
-        GetFurniture(selected)
-    else
-        warn("Pilih furniture dulu!")
-    end
-end)
-
-m:Button("Teleport to Selected Furniture", function()
-    if selected then
-        TeleportToFurniture(selected)
-    else
-        warn("Pilih furniture dulu!")
-    end
-end)
-
-m:Button("Close Furniture GUI", function()
-    if m.Destroy then pcall(function() m:Destroy() end) end
-end)
+})
 
 
 
