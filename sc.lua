@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC2",
-   LoadingTitle = "HaeX SC2",
+   Name = "DN SC3",
+   LoadingTitle = "HaeX SC3",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -229,108 +229,102 @@ MainTab:CreateButton({
         local m = lib:Window("Furniture GUI")
         local selected = nil
 
+        ----------------------------------------------------------------
+        -- RETURN FURNITURE (Market Only)
+        ----------------------------------------------------------------
         local function ReturnFurniture()
-    local list = {}
-    local market = workspace:FindFirstChild("Wyposazenie")
+            local list = {}
+            local market = workspace:FindFirstChild("Wyposazenie")
 
-    if not market then
-        warn("Folder Wyposazenie tidak ditemukan!")
-        return list
-    end
-
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") then
-            -- Furniture harus punya BasePart (objek fisik)
-            local part = v:FindFirstChildWhichIsA("BasePart", true)
-            if part then
-                table.insert(list, v.Name)
+            if not market then
+                warn("Folder Wyposazenie tidak ditemukan!")
+                return list
             end
-        end
-    end
 
-    return list
-end
-
-
-
-local function GetFurniture(selected)
-    if not selected then return false end
-    local market = workspace:FindFirstChild("Wyposazenie")
-    if not market then return false end
-
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") and v.Name == selected then
-            pcall(function()
-                RS.PickupItemEvent:FireServer(v)
-            end)
-            return true
-        end
-    end
-
-    return false
-end
-
-
-        m:Dropdown("Selected Furniture", ReturnFurniture(), function(option)
-            selected = option
-        end)
-
-        m:Button("Bring Selected Furniture", function ()
-            if selected then GetFurniture() end
-        end)
-
-        local function TeleportToFurniture(selected)
-    local hrp = GetHRP()
-    if not selected or not hrp then return end
-
-    local market = workspace:FindFirstChild("Wyposazenie")
-    if not market then return end
-
-    for _, v in ipairs(market:GetChildren()) do
-        if v:IsA("Model") and v.Name == selected then
-            local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
-            if part then
-                hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+            for _, v in ipairs(market:GetChildren()) do
+                if v:IsA("Model") and v:FindFirstChildWhichIsA("BasePart", true) then
+                    table.insert(list, v.Name)
+                end
             end
-            return
+
+            return list
         end
-    end
-end
 
+        ----------------------------------------------------------------
+        -- GET FURNITURE (Pick Up Selected)
+        ----------------------------------------------------------------
+        local function GetFurniture(sel)
+            if not sel then return false end
+            local market = workspace:FindFirstChild("Wyposazenie")
+            if not market then return false end
 
-    -- Hanya cek furniture di MARKET
-    local market = workspace:FindFirstChild("Wyposazenie")
-    if not market then return end
+            for _, v in ipairs(market:GetChildren()) do
+                if v:IsA("Model") and v.Name == sel then
+                    pcall(function()
+                        RS.PickupItemEvent:FireServer(v)
+                    end)
+                    return true
+                end
+            end
 
-    for _, folder in pairs(market:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, md in pairs(folder:GetChildren()) do
-                if md:IsA("Model") and md.Name == selected then
+            return false
+        end
 
-                    -- Cari part utama
-                    local part = md.PrimaryPart
-                        or md:FindFirstChild("HumanoidRootPart")
-                        or md:FindFirstChildWhichIsA("BasePart")
+        ----------------------------------------------------------------
+        -- TELEPORT TO FURNITURE (Market Only)
+        ----------------------------------------------------------------
+        local function TeleportToFurniture(sel)
+            if not sel then return end
+            local hrp = GetHRP()
+            if not hrp then return end
 
+            local market = workspace:FindFirstChild("Wyposazenie")
+            if not market then return end
+
+            for _, v in ipairs(market:GetChildren()) do
+                if v:IsA("Model") and v.Name == sel then
+                    local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
                     if part then
                         hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
                     end
-
                     return
                 end
             end
         end
-    end
-end)
 
+        ----------------------------------------------------------------
+        -- UI COMPONENTS
+        ----------------------------------------------------------------
+        m:Dropdown("Selected Furniture", ReturnFurniture(), function(val)
+            selected = val
+        end)
 
+        m:Button("Bring Selected Furniture", function()
+            if selected then
+                GetFurniture(selected)
+            else
+                warn("Pilih furniture dulu.")
+            end
+        end)
 
+        m:Button("Teleport to Selected Furniture", function()
+            if selected then
+                TeleportToFurniture(selected)
+            else
+                warn("Pilih furniture dulu.")
+            end
+        end)
 
         m:Button("Close Furniture GUI", function()
-            m:Destroy()
+            -- jika Turtle-Lib punya method Destroy pada window ini, m:Destroy() oke.
+            -- kalau tidak, tinggal close/clear sesuai library. Biasanya m:Destroy() bekerja.
+            if m.Destroy then
+                pcall(function() m:Destroy() end)
+            end
         end)
     end
 })
+
 
 -- Sound Spam
 MainTab:CreateToggle({
