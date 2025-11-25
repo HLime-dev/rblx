@@ -11,6 +11,7 @@ local Window = Rayfield:CreateWindow({
 
 local players = game:GetService("Players")
 local plr = players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
 
 -------------------------------------------------------
 --==================== UTILITY TAB ==================--
@@ -71,20 +72,9 @@ UtilityTab:CreateButton({
 local MainTab = Window:CreateTab("Main", 4483362460)
 
 -- Helper functions
-local function GetChar()
-    return plr.Character or plr.CharacterAdded:Wait()
-end
-
-local function GetHRP()
-    local char = GetChar()
-    return char:WaitForChild("HumanoidRootPart", 2)
-end
-
-local function GetHum()
-    local char = GetChar()
-    return char:WaitForChild("Humanoid", 2)
-end
-
+local function GetChar() return plr.Character or plr.CharacterAdded:Wait() end
+local function GetHRP() local char = GetChar() return char:WaitForChild("HumanoidRootPart", 2) end
+local function GetHum() local char = GetChar() return char:WaitForChild("Humanoid", 2) end
 local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
 -- Noclip
@@ -152,6 +142,56 @@ MainTab:CreateButton({
     end
 })
 
+-- Bring Furniture
+local selectedFurniture = nil
+local function ReturnFurniture()
+    local list = {}
+    for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if x:IsA("Folder") then
+            for _, md in ipairs(x:GetChildren()) do
+                if md:IsA("Model") and not table.find(list, md.Name) then
+                    table.insert(list, md.Name)
+                end
+            end
+        elseif x:IsA("Model") and not table.find(list, x.Name) then
+            table.insert(list, x.Name)
+        end
+    end
+    return list
+end
+
+MainTab:CreateDropdown({
+    Name = "Selected Furniture",
+    Options = ReturnFurniture(),
+    Callback = function(option)
+        selectedFurniture = option
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Bring Selected Furniture",
+    Callback = function()
+        if not selectedFurniture then return end
+        local hrp = GetHRP()
+        if not hrp then return end
+
+        local found = false
+        -- Cari furniture di seluruh workspace
+        for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
+            local models = folder:IsA("Folder") and folder:GetChildren() or {folder}
+            for _, model in ipairs(models) do
+                if model:IsA("Model") and model.Name == selectedFurniture then
+                    -- Pickup item melalui RemoteEvent
+                    pcall(function() RS.PickupItemEvent:FireServer(model) end)
+                    found = true
+                    break
+                end
+            end
+            if found then break end
+        end
+    end
+})
+
 -- Sound Spam
 MainTab:CreateToggle({
     Name = "Sound Spam",
@@ -161,8 +201,8 @@ MainTab:CreateToggle({
         task.spawn(function()
             while getgenv().sound_spam do
                 pcall(function()
-                    game.ReplicatedStorage.SoundEvent:FireServer("Drink")
-                    game.ReplicatedStorage.SoundEvent:FireServer("Eat")
+                    RS.SoundEvent:FireServer("Drink")
+                    RS.SoundEvent:FireServer("Eat")
                 end)
                 task.wait()
             end
