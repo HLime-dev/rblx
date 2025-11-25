@@ -144,58 +144,64 @@ MainTab:CreateButton({
 
 -- Bring Furniture
 -- Bring Selected Furniture
--- Bring Selected Furniture
-local selectedFurniture = nil
+-- Tambahkan di tab Main
+MainTab:CreateButton({
+    Name = "Open Furniture GUI",
+    Callback = function()
+        -- Load Turtle-Lib GUI untuk furniture
+        local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
+        local m = lib:Window("Furniture")
+        local players = game:GetService("Players")
+        local plr = players.LocalPlayer
 
-local function ReturnFurniture()
-    local Names = {}
-    for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
-        if item:IsA("Folder") then
-            for _, interno in pairs(item:GetChildren()) do
-                if interno:IsA("Model") and not table.find(Names, interno.Name) then
-                    table.insert(Names, interno.Name)
+        -- Helper
+        local function GetChar() return plr.Character or plr.CharacterAdded:Wait() end
+
+        -- Variabel furniture
+        local selected = nil
+        local function ReturnFurniture()
+            local Names = {}
+            for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
+                if item:IsA("Folder") then
+                    for _, interno in pairs(item:GetChildren()) do
+                        if interno:IsA("Model") and not table.find(Names, interno.Name) then
+                            table.insert(Names, interno.Name)
+                        end
+                    end
+                elseif item:IsA("Model") and not table.find(Names, item.Name) then
+                    table.insert(Names, item.Name)
                 end
             end
-        elseif item:IsA("Model") and not table.find(Names, item.Name) then
-            table.insert(Names, item.Name)
+            return Names
         end
-    end
-    return Names
-end
 
-local function GetFurniture()
-    for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
-        if furniture:IsA("Folder") then
-            for _, interno in pairs(furniture:GetChildren()) do
-                if interno:IsA("Model") and interno.Name == selectedFurniture then
-                    game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+        local function GetFurniture()
+            for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
+                if furniture:IsA("Folder") then
+                    for _, interno in pairs(furniture:GetChildren()) do
+                        if interno:IsA("Model") and interno.Name == selected then
+                            game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+                            return true
+                        end
+                    end
+                elseif furniture:IsA("Model") and furniture.Name == selected then
+                    game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
                     return true
                 end
             end
-        elseif furniture:IsA("Model") and furniture.Name == selectedFurniture then
-            game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
-            return true
+            return false
         end
-    end
-    return false
-end
 
--- Dropdown
-MainTab:CreateDropdown({
-    Name = "Selected Furniture",
-    Options = ReturnFurniture(),
-    Callback = function(option)
-        selectedFurniture = option
-    end
-})
+        -- Dropdown dan Button Turtle-Lib
+        m:Dropdown("Selected Furniture", ReturnFurniture(), function(option)
+            selected = option
+        end)
 
--- Button untuk ambil furniture
-MainTab:CreateButton({
-    Name = "Bring Selected Furniture",
-    Callback = function()
-        if selectedFurniture ~= nil then
-            GetFurniture()
-        end
+        m:Button("Bring Selected Furniture", function ()
+            if selected then
+                GetFurniture()
+            end
+        end)
     end
 })
 
