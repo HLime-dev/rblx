@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC7",
-   LoadingTitle = "HaeX SC7",
+   Name = "DN SC8",
+   LoadingTitle = "HaeX SC8",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -269,6 +269,39 @@ MainTab:CreateButton({
         m:Button("Bring Selected Furniture", function ()
             if selected then GetFurniture() end
         end)
+
+         m:Button("Teleport to Selected Furniture", function()
+    if not selected then return end
+    local hrp = GetHRP()
+    if not hrp then return end
+
+    for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
+        if furniture:IsA("Folder") then
+            for _, interno in pairs(furniture:GetChildren()) do
+                if interno:IsA("Model") and interno.Name == selected then
+                    local part = interno:FindFirstChild("HumanoidRootPart")
+                        or interno:FindFirstChild("PrimaryPart")
+                        or interno:FindFirstChildWhichIsA("BasePart")
+
+                    if part then
+                        hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+                    end
+                    return
+                end
+            end
+        elseif furniture:IsA("Model") and furniture.Name == selected then
+            local part = furniture:FindFirstChild("HumanoidRootPart")
+                or furniture.PrimaryPart
+                or furniture:FindFirstChildWhichIsA("BasePart")
+
+            if part then
+                hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+            end
+            return
+        end
+    end
+end)
+
 
         m:Button("Close Furniture GUI", function()
             m:Destroy()
