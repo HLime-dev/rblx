@@ -229,35 +229,35 @@ MainTab:CreateButton({
         local m = lib:Window("Furniture GUI")
         local selected = nil
 
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
         -- RETURN FURNITURE (Market Only)
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
         local function ReturnFurniture()
             local list = {}
             local market = workspace:FindFirstChild("Wyposazenie")
-
+        
             if not market then
                 warn("Folder Wyposazenie tidak ditemukan!")
                 return list
             end
-
+        
             for _, v in ipairs(market:GetChildren()) do
                 if v:IsA("Model") and v:FindFirstChildWhichIsA("BasePart", true) then
                     table.insert(list, v.Name)
                 end
             end
-
+        
             return list
         end
 
-        ----------------------------------------------------------------
-        -- GET FURNITURE (Pick Up Selected)
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
+        -- PICKUP FURNITURE
+        -----------------------------------------------------------
         local function GetFurniture(sel)
             if not sel then return false end
             local market = workspace:FindFirstChild("Wyposazenie")
             if not market then return false end
-
+        
             for _, v in ipairs(market:GetChildren()) do
                 if v:IsA("Model") and v.Name == sel then
                     pcall(function()
@@ -266,13 +266,12 @@ MainTab:CreateButton({
                     return true
                 end
             end
-
             return false
         end
 
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
         -- TELEPORT TO FURNITURE (Market Only)
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
         local function TeleportToFurniture(sel)
             if not sel then return end
             local hrp = GetHRP()
@@ -292,9 +291,9 @@ MainTab:CreateButton({
             end
         end
 
-        ----------------------------------------------------------------
-        -- UI COMPONENTS
-        ----------------------------------------------------------------
+        -----------------------------------------------------------
+        -- GUI COMPONENTS
+        -----------------------------------------------------------
         m:Dropdown("Selected Furniture", ReturnFurniture(), function(val)
             selected = val
         end)
@@ -303,7 +302,7 @@ MainTab:CreateButton({
             if selected then
                 GetFurniture(selected)
             else
-                warn("Pilih furniture dulu.")
+                warn("Pilih furniture dulu!")
             end
         end)
 
@@ -311,19 +310,16 @@ MainTab:CreateButton({
             if selected then
                 TeleportToFurniture(selected)
             else
-                warn("Pilih furniture dulu.")
+                warn("Pilih furniture dulu!")
             end
         end)
 
         m:Button("Close Furniture GUI", function()
-            -- jika Turtle-Lib punya method Destroy pada window ini, m:Destroy() oke.
-            -- kalau tidak, tinggal close/clear sesuai library. Biasanya m:Destroy() bekerja.
-            if m.Destroy then
-                pcall(function() m:Destroy() end)
-            end
+            if m.Destroy then pcall(function() m:Destroy() end) end
         end)
     end
 })
+
 
 
 -- Sound Spam
