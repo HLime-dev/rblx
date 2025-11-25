@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC3",
-   LoadingTitle = "HaeX SC3",
+   Name = "DN SC4",
+   LoadingTitle = "HaeX SC4",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -318,35 +318,66 @@ TeleportTab:CreateButton({
     end
 })
 
-TeleportTab:CreateTextBox({
-    Name = "Teleport to Player",
-    PlaceholderText = "Player Name",
-    Callback = function(text)
-        text = text:lower()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= plr and (p.Name:lower():find(text) or p.DisplayName:lower():find(text)) then
+-- Variabel untuk menyimpan player yang dipilih
+local selectedPlayer = nil
+
+-- Ambil daftar semua player kecuali local player
+local function GetPlayerList()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= plr then
+            table.insert(list, p.Name)
+        end
+    end
+    return list
+end
+
+-- Dropdown untuk pilih player
+TeleportTab:CreateDropdown({
+    Name = "Select Player",
+    Options = GetPlayerList(),
+    Callback = function(option)
+        selectedPlayer = option -- simpan player yang dipilih
+    end
+})
+
+-- Tombol teleport ke player yang dipilih
+TeleportTab:CreateButton({
+    Name = "Teleport to Selected Player",
+    Callback = function()
+        if selectedPlayer then
+            local target = Players:FindFirstChild(selectedPlayer)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = GetHRP()
-                local tHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and tHRP then hrp.CFrame = tHRP.CFrame end
-                return
+                if hrp then
+                    hrp.CFrame = target.Character.HumanoidRootPart.CFrame
+                end
+            else
+                warn("Player tidak tersedia / belum spawn.")
             end
+        else
+            warn("Belum memilih player.")
         end
     end
 })
+
+-- Optional: Refresh Dropdown (jika ada player baru join)
+TeleportTab:CreateButton({
+    Name = "Refresh Player List",
+    Callback = function()
+        local dropdown = TeleportTab:FindFirstChild("Select Player")
+        if dropdown then
+            dropdown:UpdateOptions(GetPlayerList())
+        end
+    end
+})
+
 
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
 local SettingsTab = Window:CreateTab("Settings", 4483362458) -- pastikan icon unik
 
-SettingsTab:CreateButton({
-    Name = "Close GUI",
-    Callback = function()
-        Rayfield:Destroy()
-    end
-})
 
-SettingsTab:CreateLabel({
-    Name = "Settings Tab Ready!",
-    Text = "Semua setting aktif"
-})
+
+
