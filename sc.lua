@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC9",
-   LoadingTitle = "HaeX SC9",
+   Name = "DN SC1",
+   LoadingTitle = "HaeX SC1",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -297,24 +297,31 @@ end
     local hrp = GetHRP()
     if not hrp then return end
 
-    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
-        
-        if category:IsA("Folder") then
-            for _, item in ipairs(category:GetChildren()) do
-                if item:IsA("Model") and item.Name == selected then
-                    local part = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                    if part then hrp.CFrame = part.CFrame + Vector3.new(0,5,0) end
+    -- Hanya cek furniture di MARKET
+    local market = workspace:FindFirstChild("Wyposazenie")
+    if not market then return end
+
+    for _, folder in pairs(market:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, md in pairs(folder:GetChildren()) do
+                if md:IsA("Model") and md.Name == selected then
+
+                    -- Cari part utama
+                    local part = md.PrimaryPart
+                        or md:FindFirstChild("HumanoidRootPart")
+                        or md:FindFirstChildWhichIsA("BasePart")
+
+                    if part then
+                        hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+                    end
+
                     return
                 end
             end
-        
-        elseif category:IsA("Model") and category.Name == selected then
-            local part = category.PrimaryPart or category:FindFirstChildWhichIsA("BasePart")
-            if part then hrp.CFrame = part.CFrame + Vector3.new(0,5,0) end
-            return
         end
     end
 end)
+
 
 
 
