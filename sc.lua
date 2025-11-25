@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC6",
-   LoadingTitle = "HaeX SC6",
+   Name = "DN SC7",
+   LoadingTitle = "HaeX SC7",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -43,6 +43,7 @@ UtilityTab:CreateSlider({
     end,
 })
 
+-- JumpPower fix
 UtilityTab:CreateSlider({
     Name = "JumpPower",
     Range = {50, 200},
@@ -50,8 +51,14 @@ UtilityTab:CreateSlider({
     CurrentValue = 50,
     Callback = function(val)
         local char = GetChar()
-        if char then char.Humanoid.JumpPower = val end
-    end,
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = val
+        end
+        -- Pastikan juga saat respawn
+        plr.CharacterAdded:Connect(function(c)
+            c:WaitForChild("Humanoid").JumpPower = val
+        end)
+    end
 })
 
 UtilityTab:CreateButton({
@@ -177,6 +184,42 @@ MainTab:CreateButton({
         if newHRP then newHRP.CFrame = lastPos end
     end
 })
+
+-- Auto Eat
+getgenv().autoEat = false
+UtilityTab:CreateToggle({
+    Name = "Auto Eat",
+    CurrentValue = false,
+    Callback = function(state)
+        getgenv().autoEat = state
+        task.spawn(function()
+            while getgenv().autoEat do
+                local char = GetChar()
+                local hum = char:FindFirstChild("Humanoid")
+                if hum and hum.Health < hum.MaxHealth then
+                    -- Cari food di backpack
+                    local food = nil
+                    for _, item in ipairs(plr.Backpack:GetChildren()) do
+                        if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                            food = item
+                            break
+                        end
+                    end
+                    -- Pakai food jika ada
+                    if food then
+                        food.Parent = char
+                        task.wait(0.1)
+                        if food:FindFirstChildOfClass("ProximityPrompt") then
+                            fireproximityprompt(food:FindFirstChildOfClass("ProximityPrompt"))
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    end
+})
+
 
 -- Furniture GUI
 MainTab:CreateButton({
@@ -380,6 +423,76 @@ TeleportTab:CreateButton({
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
 local SettingsTab = Window:CreateTab("Settings", 4483362458) -- pastikan icon unik
+
+-- Tandai lokasi monster malam
+getgenv().nightMonsterESP = false
+UtilityTab:CreateToggle({
+    Name = "Night Monsters ESP",
+    CurrentValue = false,
+    Callback = function(state)
+        getgenv().nightMonsterESP = state
+        if state then
+            task.spawn(function()
+                while getgenv().nightMonsterESP do
+                    local nightFolder
+                    for _, f in ipairs(workspace:GetChildren()) do
+                        if f:IsA("Folder") and f.Name:match("Night") then
+                            nightFolder = f
+                            break
+                        end
+                    end
+                    if nightFolder then
+                        for _, m in ipairs(nightFolder:GetChildren()) do
+                            if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") and not m:FindFirstChild("NM_ESP") then
+                                -- Highlight
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "NM_ESP"
+                                hl.FillColor = Color3.fromRGB(255,0,0)
+                                hl.FillTransparency = 0.5
+                                hl.OutlineColor = Color3.fromRGB(255,255,255)
+                                hl.OutlineTransparency = 0
+                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                hl.Parent = m
+
+                                -- Billboard label lokasi
+                                local hrp = m:FindFirstChild("HumanoidRootPart")
+                                if hrp then
+                                    local bill = Instance.new("BillboardGui")
+                                    bill.Name = "NM_Label"
+                                    bill.Adornee = hrp
+                                    bill.Size = UDim2.new(0,100,0,50)
+                                    bill.StudsOffset = Vector3.new(0,3,0)
+                                    bill.AlwaysOnTop = true
+                                    local txt = Instance.new("TextLabel")
+                                    txt.Size = UDim2.new(1,0,1,0)
+                                    txt.BackgroundTransparency = 1
+                                    txt.Text = "Night Monster"
+                                    txt.TextColor3 = Color3.fromRGB(255,0,0)
+                                    txt.TextScaled = true
+                                    txt.Parent = bill
+                                    bill.Parent = m
+                                end
+                            end
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            -- Hapus semua ESP / label
+            for _, f in ipairs(workspace:GetChildren()) do
+                if f:IsA("Folder") and f.Name:match("Night") then
+                    for _, m in ipairs(f:GetChildren()) do
+                        local hl = m:FindFirstChild("NM_ESP")
+                        if hl then hl:Destroy() end
+                        local lbl = m:FindFirstChild("NM_Label")
+                        if lbl then lbl:Destroy() end
+                    end
+                end
+            end
+        end
+    end
+})
 
 -- Close GUI (tetap di Main)
 SettingsTab:CreateButton({
