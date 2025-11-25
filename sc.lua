@@ -3,9 +3,9 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "novaRyn",
-   LoadingTitle = "Nova",
-   LoadingSubtitle = "by Sixeyes",
+   Name = "DN SC",
+   LoadingTitle = "HaeX SC",
+   LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
 
@@ -71,7 +71,7 @@ UtilityTab:CreateButton({
 -------------------------------------------------------
 --==================== MAIN TAB =====================--
 -------------------------------------------------------
-local MainTab = Window:CreateTab("Main", 4483362460)
+local MainTab = Window:CreateTab("Main", "chess-queen")
 
 -- Noclip
 MainTab:CreateToggle({
@@ -293,7 +293,7 @@ MainTab:CreateButton({
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
-local SettingsTab = Window:CreateTab("Settings", 4483362462) -- ganti icon ke angka lain unik
+local SettingsTab = Window:CreateTab("Settings", "settings") -- ganti icon ke angka lain unik
 
 -- Tombol Close GUI
 SettingsTab:CreateButton({
@@ -303,10 +303,4 @@ SettingsTab:CreateButton({
     end
 })
 
--- Label Info
-SettingsTab:CreateLabel("Press LeftControl to Hide UI", Color3.fromRGB(127, 143, 166))
-SettingsTab:CreateLabel("~ t.me/arceusxscripts", Color3.fromRGB(127, 143, 166))
-
--- Keybind hide/show UI
-Window:BindToKey("LeftControl")
 
