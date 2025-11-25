@@ -337,7 +337,7 @@ MainTab:CreateTextBox({
 -------------------------------------------------------
 --==================== CLOSE TAB ====================--
 -------------------------------------------------------
-local CloseTab = Window:CreateTab("Close", 4483362458) -- pastikan ID icon unik
+local CloseTab = Window:CreateTab("Close", 4483362459) -- pastikan ID icon unik
 
 -- Tombol Close GUI
 CloseTab:CreateButton({
