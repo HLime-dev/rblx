@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC5",
-   LoadingTitle = "HaeX SC5",
+   Name = "DN SC9",
+   LoadingTitle = "HaeX SC9",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -234,7 +234,7 @@ MainTab:CreateButton({
         -----------------------------------------------------------
         local function ReturnFurniture()
     local list = {}
-    local market = workspace:FindFirstChild("Wyposazenie")
+    local market = workspace:FindFirstChild("MarketWyposazenie")
 
     if not market then
         warn("Folder Wyposazenie tidak ditemukan!")
@@ -265,7 +265,7 @@ end
         -----------------------------------------------------------
       local function GetFurniture(sel)
     if not sel then return false end
-    local market = workspace:FindFirstChild("Wyposazenie")
+    local market = workspace:FindFirstChild("MarketWyposazenie")
     if not market then return false end
 
     local target = nil
@@ -300,7 +300,7 @@ end
         local function TeleportToFurniture(sel)
     if not sel then return end
     local hrp = GetHRP()
-    local market = workspace:FindFirstChild("Wyposazenie")
+    local market = workspace:FindFirstChild("MarketWyposazenie")
 
     if not hrp or not market then return end
 
