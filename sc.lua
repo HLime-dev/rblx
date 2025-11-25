@@ -71,7 +71,7 @@ UtilityTab:CreateButton({
 -------------------------------------------------------
 --==================== MAIN TAB =====================--
 -------------------------------------------------------
-local MainTab = Window:CreateTab("Main", "chess-queen")
+local MainTab = Window:CreateTab("Main", 4483362458)
 
 -- Noclip
 MainTab:CreateToggle({
@@ -293,7 +293,7 @@ MainTab:CreateButton({
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
-local SettingsTab = Window:CreateTab("Settings", "settings") -- ganti icon ke angka lain unik
+local SettingsTab = Window:CreateTab("Settings", 4483362458) -- ganti icon ke angka lain unik
 
 -- Tombol Close GUI
 SettingsTab:CreateButton({
