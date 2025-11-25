@@ -130,6 +130,20 @@ MainTab:CreateToggle({
 })
 
 -------------------------------------------------------
+-- WalkSpeed
+-------------------------------------------------------
+MainTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16,200},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(val)
+        local hum = GetHum()
+        if hum then hum.WalkSpeed = val end
+    end
+})
+
+-------------------------------------------------------
 -- Collect All Food
 -------------------------------------------------------
 MainTab:CreateButton({
@@ -181,7 +195,7 @@ MainTab:CreateButton({
 })
 
 -------------------------------------------------------
--- Bring Selected Furniture (diperbaiki)
+-- Furniture
 -------------------------------------------------------
 local selectedFurniture = nil
 local function ReturnFurniture()
@@ -215,23 +229,26 @@ MainTab:CreateButton({
         local hrp = GetHRP()
         if not hrp then return end
         local originalPos = hrp.CFrame
+        local MARKET_POS = CFrame.new(143,5,-118)
+        hrp.CFrame = MARKET_POS
+        task.wait(0.4)
 
-        -- Cari furniture di seluruh workspace.Wyposazenie
-        local found = false
-        for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
-            if x:IsA("Folder") then
-                for _, model in ipairs(x:GetChildren()) do
+        for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, model in ipairs(folder:GetChildren()) do
                     if model:IsA("Model") and model.Name == selectedFurniture then
                         game.ReplicatedStorage.PickupItemEvent:FireServer(model)
-                        found = true
-                        break
+                        task.wait(0.3)
+                        hrp.CFrame = originalPos
+                        return
                     end
                 end
-            elseif x:IsA("Model") and x.Name == selectedFurniture then
-                game.ReplicatedStorage.PickupItemEvent:FireServer(x)
-                found = true
+            elseif folder:IsA("Model") and folder.Name == selectedFurniture then
+                game.ReplicatedStorage.PickupItemEvent:FireServer(folder)
+                task.wait(0.3)
+                hrp.CFrame = originalPos
+                return
             end
-            if found then break end
         end
     end
 })
@@ -338,15 +355,3 @@ MainTab:CreateBox({
         end
     end
 })
-
--------------------------------------------------------
---==================== CLOSE TAB =====================--
--------------------------------------------------------
-local CloseTab = Window:CreateTab("Close", 4483362458)
-CloseTab:CreateButton({
-    Name = "Close GUI",
-    Callback = function()
-        Rayfield:Destroy()
-    end
-})
-
