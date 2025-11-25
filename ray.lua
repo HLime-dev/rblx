@@ -88,6 +88,9 @@ FlyTab:CreateButton({
 --==================== MAIN TAB =====================--
 -------------------------------------------------------
 
+-------------------------------------------------------
+--==================== MAIN TAB =====================--
+-------------------------------------------------------
 local MainTab = Window:CreateTab("Main", 4483362458)
 local players = game:GetService("Players")
 local plr = players.LocalPlayer
@@ -109,9 +112,7 @@ end
 
 local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
--------------------------------------------------------
 -- Noclip
--------------------------------------------------------
 MainTab:CreateToggle({
     Name = "Noclip",
     CurrentValue = false,
@@ -138,9 +139,7 @@ MainTab:CreateToggle({
     end
 })
 
--------------------------------------------------------
 -- Collect All Food
--------------------------------------------------------
 MainTab:CreateButton({
     Name = "Collect All Food",
     Callback = function()
@@ -165,9 +164,7 @@ MainTab:CreateButton({
     end
 })
 
--------------------------------------------------------
 -- Drop All Food
--------------------------------------------------------
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
@@ -189,9 +186,7 @@ MainTab:CreateButton({
     end
 })
 
--------------------------------------------------------
 -- Bring Selected Furniture
--------------------------------------------------------
 local selectedFurniture = nil
 local function ReturnFurniture()
     local list = {}
@@ -242,9 +237,7 @@ MainTab:CreateButton({
     end
 })
 
--------------------------------------------------------
 -- Sound Spam
--------------------------------------------------------
 MainTab:CreateToggle({
     Name = "Sound Spam",
     CurrentValue = false,
@@ -262,9 +255,7 @@ MainTab:CreateToggle({
     end
 })
 
--------------------------------------------------------
 -- Monsters ESP
--------------------------------------------------------
 MainTab:CreateToggle({
     Name = "Monsters ESP",
     CurrentValue = false,
@@ -304,9 +295,7 @@ MainTab:CreateToggle({
     end
 })
 
--------------------------------------------------------
 -- Teleport
--------------------------------------------------------
 MainTab:CreateButton({
     Name = "Teleport to Bunker",
     Callback = function()
@@ -328,11 +317,10 @@ MainTab:CreateButton({
     end
 })
 
-MainTab:CreateBox({
+MainTab:CreateTextBox({
     Name = "Teleport to Player",
     PlaceholderText = "Player Name",
-    Callback = function(text, enter)
-        if not enter then return end
+    Callback = function(text)
         text = text:lower()
         for _, p in ipairs(players:GetPlayers()) do
             if p ~= plr and (p.Name:lower():find(text) or p.DisplayName:lower():find(text)) then
