@@ -1,7 +1,7 @@
---// Load Rayfield UI Library 
+--// Load Rayfield
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
---// Window 
+--// Window
 local Window = Rayfield:CreateWindow({
    Name = "novaRyn",
    LoadingTitle = "Nova",
@@ -12,8 +12,17 @@ local Window = Rayfield:CreateWindow({
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
+local workspace = game:GetService("Workspace")
+local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
---// UTILITY TAB
+-- Helper functions
+local function GetChar() return plr.Character or plr.CharacterAdded:Wait() end
+local function GetHRP() local char = GetChar() return char:WaitForChild("HumanoidRootPart", 2) end
+local function GetHum() local char = GetChar() return char:WaitForChild("Humanoid", 2) end
+
+-------------------------------------------------------
+--==================== UTILITY TAB ==================--
+-------------------------------------------------------
 local UtilityTab = Window:CreateTab("Utility", 4483362458)
 
 UtilityTab:CreateButton({
@@ -29,7 +38,7 @@ UtilityTab:CreateSlider({
     Increment = 1,
     CurrentValue = 16,
     Callback = function(val)
-        local char = plr.Character
+        local char = GetChar()
         if char then char.Humanoid.WalkSpeed = val end
     end,
 })
@@ -40,7 +49,7 @@ UtilityTab:CreateSlider({
     Increment = 1,
     CurrentValue = 50,
     Callback = function(val)
-        local char = plr.Character
+        local char = GetChar()
         if char then char.Humanoid.JumpPower = val end
     end,
 })
@@ -59,14 +68,10 @@ UtilityTab:CreateButton({
     end,
 })
 
---// MAIN TAB
+-------------------------------------------------------
+--==================== MAIN TAB =====================--
+-------------------------------------------------------
 local MainTab = Window:CreateTab("Main", 4483362460)
-
--- Helper functions
-local function GetChar() return plr.Character or plr.CharacterAdded:Wait() end
-local function GetHRP() local char = GetChar() return char:WaitForChild("HumanoidRootPart", 2) end
-local function GetHum() local char = GetChar() return char:WaitForChild("Humanoid", 2) end
-local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
 -- Noclip
 MainTab:CreateToggle({
@@ -90,8 +95,6 @@ MainTab:CreateToggle({
     end
 })
 
--- Tambahkan semua tombol Main lainnya (Collect All Food, Drop All Food, Sound Spam, Monsters ESP, Teleport, dll)
--- sama seperti kode sebelumnya
 -- Collect All Food
 MainTab:CreateButton({
     Name = "Collect All Food",
@@ -135,13 +138,12 @@ MainTab:CreateButton({
     end
 })
 
--- Bring Furniture
--- Bring Selected Furniture
+-- Furniture GUI
 MainTab:CreateButton({
     Name = "Open Furniture GUI",
     Callback = function()
         local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
-        local m = lib:Window("Furniture")
+        local m = lib:Window("Furniture GUI")
         local selected = nil
 
         local function ReturnFurniture()
@@ -165,12 +167,12 @@ MainTab:CreateButton({
                 if furniture:IsA("Folder") then
                     for _, interno in pairs(furniture:GetChildren()) do
                         if interno:IsA("Model") and interno.Name == selected then
-                            RS.PickupItemEvent:FireServer(interno)
+                            pcall(function() RS.PickupItemEvent:FireServer(interno) end)
                             return true
                         end
                     end
                 elseif furniture:IsA("Model") and furniture.Name == selected then
-                    RS.PickupItemEvent:FireServer(furniture)
+                    pcall(function() RS.PickupItemEvent:FireServer(furniture) end)
                     return true
                 end
             end
@@ -182,16 +184,11 @@ MainTab:CreateButton({
         end)
 
         m:Button("Bring Selected Furniture", function ()
-            if selected then
-                GetFurniture()
-            end
+            if selected then GetFurniture() end
         end)
 
-        -- Tombol Close Turtle GUI
         m:Button("Close Furniture GUI", function()
-            if m then
-                m:Destroy()
-            end
+            m:Destroy()
         end)
     end
 })
@@ -205,15 +202,14 @@ MainTab:CreateToggle({
         task.spawn(function()
             while getgenv().sound_spam do
                 pcall(function()
-                    game:GetService("ReplicatedStorage"):WaitForChild("SoundEvent"):FireServer("Drink")
-                    game:GetService("ReplicatedStorage"):WaitForChild("SoundEvent"):FireServer("Eat")
+                    RS:WaitForChild("SoundEvent"):FireServer("Drink")
+                    RS:WaitForChild("SoundEvent"):FireServer("Eat")
                 end)
                 task.wait()
             end
         end)
     end
 })
-
 
 -- Monsters ESP
 MainTab:CreateToggle({
@@ -250,16 +246,14 @@ MainTab:CreateToggle({
     end
 })
 
--- Teleport
+-- Teleports
 MainTab:CreateButton({
     Name = "Teleport to Bunker",
     Callback = function()
         local hrp = GetHRP()
-        if hrp and bunkerName then
-            local bunkers = workspace:FindFirstChild("Bunkers")
-            if bunkers and bunkers:FindFirstChild(bunkerName) then
-                hrp.CFrame = bunkers[bunkerName].SpawnLocation.CFrame
-            end
+        local bunkers = workspace:FindFirstChild("Bunkers")
+        if hrp and bunkers and bunkerName and bunkers:FindFirstChild(bunkerName) then
+            hrp.CFrame = bunkers[bunkerName].SpawnLocation.CFrame
         end
     end
 })
@@ -277,7 +271,7 @@ MainTab:CreateTextBox({
     PlaceholderText = "Player Name",
     Callback = function(text)
         text = text:lower()
-        for _, p in ipairs(players:GetPlayers()) do
+        for _, p in ipairs(Players:GetPlayers()) do
             if p ~= plr and (p.Name:lower():find(text) or p.DisplayName:lower():find(text)) then
                 local hrp = GetHRP()
                 local tHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
@@ -288,9 +282,10 @@ MainTab:CreateTextBox({
     end
 })
 
-
---// CLOSE / SETTINGS TAB
-local SettingsTab = Window:CreateTab("Settings", 4483362461) -- tab icon berbeda agar unik
+-------------------------------------------------------
+--==================== SETTINGS TAB =================--
+-------------------------------------------------------
+local SettingsTab = Window:CreateTab("Settings", 4483362461)
 
 SettingsTab:CreateButton({
     Name = "Close GUI",
