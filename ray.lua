@@ -143,18 +143,17 @@ MainTab:CreateButton({
 })
 
 -- Bring Furniture
+-- Bring Selected Furniture
 local selectedFurniture = nil
 local function ReturnFurniture()
     local list = {}
-    for _, x in ipairs(workspace.Wyposazenie:GetChildren()) do
-        if x:IsA("Folder") then
-            for _, md in ipairs(x:GetChildren()) do
-                if md:IsA("Model") and not table.find(list, md.Name) then
-                    table.insert(list, md.Name)
+    for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and not table.find(list, model.Name) then
+                    table.insert(list, model.Name)
                 end
             end
-        elseif x:IsA("Model") and not table.find(list, x.Name) then
-            table.insert(list, x.Name)
         end
     end
     return list
@@ -174,23 +173,37 @@ MainTab:CreateButton({
         if not selectedFurniture then return end
         local hrp = GetHRP()
         if not hrp then return end
-
+        local originalPos = hrp.CFrame
         local found = false
-        -- Cari furniture di seluruh workspace
+
+        -- Cari furniture di dalam market saja (folder di Wyposazenie)
         for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
-            local models = folder:IsA("Folder") and folder:GetChildren() or {folder}
-            for _, model in ipairs(models) do
-                if model:IsA("Model") and model.Name == selectedFurniture then
-                    -- Pickup item melalui RemoteEvent
-                    pcall(function() RS.PickupItemEvent:FireServer(model) end)
-                    found = true
-                    break
+            if folder:IsA("Folder") then
+                for _, model in ipairs(folder:GetChildren()) do
+                    if model:IsA("Model") and model.Name == selectedFurniture then
+                        -- Teleport sementara ke furniture
+                        hrp.CFrame = model:GetModelCFrame() + Vector3.new(0,5,0)
+                        task.wait(0.2)
+                        -- Fire pickup
+                        pcall(function()
+                            if RS:FindFirstChild("PickupItemEvent") then
+                                RS.PickupItemEvent:FireServer(model)
+                            end
+                        end)
+                        task.wait(0.2)
+                        found = true
+                        break
+                    end
                 end
             end
             if found then break end
         end
+
+        -- Kembali ke posisi awal
+        hrp.CFrame = originalPos
     end
 })
+
 
 -- Sound Spam
 MainTab:CreateToggle({
