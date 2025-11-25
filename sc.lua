@@ -9,48 +9,64 @@ local Window = Rayfield:CreateWindow({
     ConfigurationSaving = { Enabled = false },
 })
 
-local players = game:GetService("Players")
-local plr = players.LocalPlayer
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
 local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
+-- Helper function untuk HumanoidRootPart
+local function GetHRP()
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        return plr.Character.HumanoidRootPart
+    else
+        return nil
+    end
+end
+
+-- Helper function untuk Noclip
+local function StartNoclip()
+    return game:GetService("RunService").Stepped:Connect(function()
+        if plr.Character then
+            for _, child in pairs(plr.Character:GetDescendants()) do
+                if child:IsA("BasePart") and child.CanCollide then
+                    child.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
 --// Main Tab
-local MainTab = Window:CreateTab("Main", 4483362458)       -- tab icon 1
+local MainTab = Window:CreateTab("Main", 4483362458)
 
 -- Noclip Toggle
+local noclipConnection
 MainTab:CreateToggle({
     Name = "Noclip",
     CurrentValue = false,
-    Flag = "NoclipToggle",
-    Callback = function(b)
-        getgenv().noclip = b
-        if noclip then
-            local function NoclipLoop()
-                if plr.Character then
-                    for _, child in pairs(plr.Character:GetDescendants()) do
-                        if child:IsA("BasePart") and child.CanCollide then
-                            child.CanCollide = false
-                        end
-                    end
-                end
-            end
-            Noclipping = game:GetService("RunService").Stepped:Connect(NoclipLoop)
+    Callback = function(value)
+        getgenv().noclip = value
+        if value then
+            noclipConnection = StartNoclip()
         else
-            if Noclipping then
-                Noclipping:Disconnect()
-                Noclipping = nil
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
             end
         end
     end
 })
 
--- WalkSpeed Box
+-- WalkSpeed Input
 MainTab:CreateInput({
     Name = "WalkSpeed",
     PlaceholderText = "Enter WalkSpeed",
     RemoveTextAfterFocusLost = false,
     Callback = function(ws)
-        if tonumber(ws) then
-            plr.Character:FindFirstChild("Humanoid").WalkSpeed = tonumber(ws)
+        local hrp = GetHRP()
+        if hrp and tonumber(ws) then
+            pcall(function()
+                hrp.Parent:FindFirstChildOfClass("Humanoid").WalkSpeed = tonumber(ws)
+            end)
         end
     end
 })
@@ -59,20 +75,24 @@ MainTab:CreateInput({
 MainTab:CreateButton({
     Name = "Collect All Food",
     Callback = function()
-        local lastPos = plr.Character:FindFirstChild("HumanoidRootPart").CFrame
+        local hrp = GetHRP()
+        if not hrp then return end
+        local lastPos = hrp.CFrame
         for _, food in pairs(game:GetService("Workspace"):GetChildren()) do
             if food:IsA("Tool") then
                 local handle = food:FindFirstChild("Handle")
                 local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
                 if handle and prompt then
-                    plr.Character.HumanoidRootPart.CFrame = handle.CFrame * CFrame.new(0,5,0)
-                    task.wait(0.25)
-                    fireproximityprompt(prompt, prompt.MaxActivationDistance)
+                    pcall(function()
+                        hrp.CFrame = handle.CFrame * CFrame.new(0,5,0)
+                        task.wait(0.25)
+                        fireproximityprompt(prompt, prompt.MaxActivationDistance)
+                    end)
                 end
             end
         end
         task.wait(0.25)
-        plr.Character.HumanoidRootPart.CFrame = lastPos
+        hrp.CFrame = lastPos
     end
 })
 
@@ -80,22 +100,24 @@ MainTab:CreateButton({
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
-        local lastPos = plr.Character.HumanoidRootPart.CFrame
+        local hrp = GetHRP()
+        if not hrp then return end
+        local lastPos = hrp.CFrame
         for _, food in pairs(plr.Backpack:GetChildren()) do
             food.Parent = plr.Character
         end
         task.wait(0.25)
-        plr.Character:FindFirstChildOfClass("Humanoid").Health = 0
-
+        pcall(function()
+            plr.Character:FindFirstChildOfClass("Humanoid").Health = 0
+        end)
         task.spawn(function()
             local function onCharacterAdded(char)
-                local hrp = char:WaitForChild("HumanoidRootPart", 5)
-                if hrp and lastPos then
+                local newHRP = char:WaitForChild("HumanoidRootPart",5)
+                if newHRP and lastPos then
                     task.wait(0.5)
-                    hrp.CFrame = lastPos
+                    newHRP.CFrame = lastPos
                 end
             end
-
             if not plr.Character or plr.Character:FindFirstChildOfClass("Humanoid").Health == 0 then
                 plr.CharacterAdded:Wait()
                 onCharacterAdded(plr.Character)
@@ -105,7 +127,7 @@ MainTab:CreateButton({
 })
 
 -- Furniture Dropdown + Bring Button
-local selectedFurniture = nil
+local selectedFurniture
 local function ReturnFurniture()
     local Names = {}
     for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
@@ -121,17 +143,22 @@ local function ReturnFurniture()
     end
     return Names
 end
+
 local function GetFurniture()
     for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
         if furniture:IsA("Folder") then
             for _, interno in pairs(furniture:GetChildren()) do
                 if interno:IsA("Model") and interno.Name == selectedFurniture then
-                    game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+                    end)
                     return true
                 end
             end
         elseif furniture:IsA("Model") and furniture.Name == selectedFurniture then
-            game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
+            pcall(function()
+                game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
+            end)
             return true
         end
     end
@@ -159,13 +186,14 @@ MainTab:CreateButton({
 MainTab:CreateToggle({
     Name = "Sound Spam",
     CurrentValue = false,
-    Flag = "SoundSpamToggle",
-    Callback = function(b)
-        getgenv().sound_spam = b
+    Callback = function(value)
+        getgenv().sound_spam = value
         task.spawn(function()
-            while sound_spam do
-                game:GetService("ReplicatedStorage").SoundEvent:FireServer("Drink")
-                game:GetService("ReplicatedStorage").SoundEvent:FireServer("Eat")
+            while getgenv().sound_spam do
+                pcall(function()
+                    game:GetService("ReplicatedStorage").SoundEvent:FireServer("Drink")
+                    game:GetService("ReplicatedStorage").SoundEvent:FireServer("Eat")
+                end)
                 task.wait()
             end
         end)
@@ -176,9 +204,8 @@ MainTab:CreateToggle({
 MainTab:CreateToggle({
     Name = "Monsters ESP",
     CurrentValue = false,
-    Flag = "MonstersESP",
-    Callback = function(b)
-        getgenv().lurker_esp = b
+    Callback = function(value)
+        getgenv().lurker_esp = value
 
         local function findNightFolder()
             for _, obj in pairs(workspace:GetChildren()) do
@@ -189,23 +216,22 @@ MainTab:CreateToggle({
             return nil
         end
 
-        if lurker_esp then
+        if value then
             task.spawn(function()
-                while lurker_esp do
+                while getgenv().lurker_esp do
                     local nightFolder = findNightFolder()
                     if nightFolder then
                         for _, lurker in pairs(nightFolder:GetChildren()) do
                             if lurker:IsA("Model") and lurker:FindFirstChild("HumanoidRootPart") then
-                                local highlight = lurker:FindFirstChild("Highlight")
-                                if not highlight then
-                                    highlight = Instance.new("Highlight")
+                                if not lurker:FindFirstChild("Highlight") then
+                                    local highlight = Instance.new("Highlight")
                                     highlight.Name = "Highlight"
                                     highlight.Parent = lurker
                                 end
                             end
                         end
                     else
-                        repeat task.wait() until findNightFolder() or not lurker_esp
+                        repeat task.wait() until findNightFolder() or not getgenv().lurker_esp
                     end
                     task.wait(1)
                 end
@@ -214,11 +240,9 @@ MainTab:CreateToggle({
             local nightFolder = findNightFolder()
             if nightFolder then
                 for _, lurker in pairs(nightFolder:GetChildren()) do
-                    if lurker:IsA("Model") and lurker:FindFirstChild("HumanoidRootPart") then
-                        local highlight = lurker:FindFirstChild("Highlight")
-                        if highlight then
-                            highlight:Destroy()
-                        end
+                    local highlight = lurker:FindFirstChild("Highlight")
+                    if highlight then
+                        highlight:Destroy()
                     end
                 end
             end
@@ -226,20 +250,26 @@ MainTab:CreateToggle({
     end
 })
 
-
-local TeleTab = Window:CreateTab("Teleport", 4483362459)   -- tab icon 2
+--// Teleport Tab
+local TeleTab = Window:CreateTab("Teleport", 4483362459)
 
 TeleTab:CreateButton({
     Name = "to Bunker",
     Callback = function()
-        plr.Character.HumanoidRootPart.CFrame = workspace.Bunkers[bunkerName].SpawnLocation.CFrame
+        local hrp = GetHRP()
+        if hrp and workspace:FindFirstChild("Bunkers") and workspace.Bunkers:FindFirstChild(bunkerName) then
+            hrp.CFrame = workspace.Bunkers[bunkerName].SpawnLocation.CFrame
+        end
     end
 })
 
 TeleTab:CreateButton({
     Name = "to Market",
     Callback = function()
-        plr.Character.HumanoidRootPart.CFrame = CFrame.new(143, 5, -118)
+        local hrp = GetHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(143, 5, -118)
+        end
     end
 })
 
@@ -248,21 +278,34 @@ TeleTab:CreateInput({
     PlaceholderText = "Player Name",
     RemoveTextAfterFocusLost = false,
     Callback = function(name)
+        local hrp = GetHRP()
+        if not hrp then return end
         local lowerName = name:lower()
-        for _, player in pairs(players:GetPlayers()) do
-            if string.find(player.Name:lower(), lowerName) or string.find(player.DisplayName:lower(), lowerName) then
-                plr.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
-                return
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and (string.find(player.Name:lower(), lowerName) or string.find(player.DisplayName:lower(), lowerName)) then
+                local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                if targetHRP then
+                    hrp.CFrame = targetHRP.CFrame
+                    return
+                end
             end
         end
     end
 })
 
-local SettingsTab = Window:CreateTab("Settings", 4483362460) -- tab icon 3
+--// Settings Tab
+local SettingsTab = Window:CreateTab("Settings", 4483362460)
 
+SettingsTab:CreateLabel("Press LeftControl to Hide UI", Color3.fromRGB(127, 143, 166))
+SettingsTab:CreateLabel("~ t.me/arceusxscripts", Color3.fromRGB(127, 143, 166))
+
+-- Close GUI Button
 SettingsTab:CreateButton({
     Name = "Close GUI",
     Callback = function()
         Rayfield:Destroy()
     end
 })
+
+-- Hide/Show GUI keybind
+Window:BindToKey("LeftControl")
