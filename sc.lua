@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC8",
-   LoadingTitle = "HaeX SC8",
+   Name = "DN SC9",
+   LoadingTitle = "HaeX SC9",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -230,37 +230,59 @@ MainTab:CreateButton({
         local selected = nil
 
         local function ReturnFurniture()
-            local Names = {}
-            for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
-                if item:IsA("Folder") then
-                    for _, interno in pairs(item:GetChildren()) do
-                        if interno:IsA("Model") and not table.find(Names, interno.Name) then
-                            table.insert(Names, interno.Name)
-                        end
-                    end
-                elseif item:IsA("Model") and not table.find(Names, item.Name) then
+    local Names = {}
+
+    -- Hanya ambil furniture yang berada DI MARKET (workspace.Wyposazenie)
+    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
+        
+        -- Market kategori folder
+        if category:IsA("Folder") then
+            for _, item in ipairs(category:GetChildren()) do
+                if item:IsA("Model") and item:FindFirstChildWhichIsA("BasePart") then
                     table.insert(Names, item.Name)
                 end
             end
-            return Names
-        end
 
-        local function GetFurniture()
-            for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
-                if furniture:IsA("Folder") then
-                    for _, interno in pairs(furniture:GetChildren()) do
-                        if interno:IsA("Model") and interno.Name == selected then
-                            pcall(function() RS.PickupItemEvent:FireServer(interno) end)
-                            return true
-                        end
+        -- Di luar folder tetapi MASIH di Wyposazenie
+        elseif category:IsA("Model") and category:FindFirstChildWhichIsA("BasePart") then
+            table.insert(Names, category.Name)
+        end
+    end
+
+    return Names
+end
+
+
+local function GetFurniture()
+    -- Loop hanya pada MARKET
+    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
+        
+        if category:IsA("Folder") then
+            for _, item in ipairs(category:GetChildren()) do
+                if item:IsA("Model") and item.Name == selected then
+                    -- Pastikan furniture masih ada (belum dipickup)
+                    if item.Parent == category then
+                        pcall(function()
+                            RS.PickupItemEvent:FireServer(item)
+                        end)
+                        return true
                     end
-                elseif furniture:IsA("Model") and furniture.Name == selected then
-                    pcall(function() RS.PickupItemEvent:FireServer(furniture) end)
-                    return true
                 end
             end
-            return false
+
+        elseif category:IsA("Model") and category.Name == selected then
+            if category.Parent == workspace.Wyposazenie then
+                pcall(function()
+                    RS.PickupItemEvent:FireServer(category)
+                end)
+                return true
+            end
         end
+    end
+
+    return false
+end
+
 
         m:Dropdown("Selected Furniture", ReturnFurniture(), function(option)
             selected = option
@@ -275,32 +297,25 @@ MainTab:CreateButton({
     local hrp = GetHRP()
     if not hrp then return end
 
-    for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
-        if furniture:IsA("Folder") then
-            for _, interno in pairs(furniture:GetChildren()) do
-                if interno:IsA("Model") and interno.Name == selected then
-                    local part = interno:FindFirstChild("HumanoidRootPart")
-                        or interno:FindFirstChild("PrimaryPart")
-                        or interno:FindFirstChildWhichIsA("BasePart")
-
-                    if part then
-                        hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
-                    end
+    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
+        
+        if category:IsA("Folder") then
+            for _, item in ipairs(category:GetChildren()) do
+                if item:IsA("Model") and item.Name == selected then
+                    local part = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                    if part then hrp.CFrame = part.CFrame + Vector3.new(0,5,0) end
                     return
                 end
             end
-        elseif furniture:IsA("Model") and furniture.Name == selected then
-            local part = furniture:FindFirstChild("HumanoidRootPart")
-                or furniture.PrimaryPart
-                or furniture:FindFirstChildWhichIsA("BasePart")
-
-            if part then
-                hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
-            end
+        
+        elseif category:IsA("Model") and category.Name == selected then
+            local part = category.PrimaryPart or category:FindFirstChildWhichIsA("BasePart")
+            if part then hrp.CFrame = part.CFrame + Vector3.new(0,5,0) end
             return
         end
     end
 end)
+
 
 
         m:Button("Close Furniture GUI", function()
