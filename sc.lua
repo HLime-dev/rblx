@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC9",
-   LoadingTitle = "HaeX SC9",
+   Name = "DN SC6",
+   LoadingTitle = "HaeX SC6",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -234,30 +234,30 @@ MainTab:CreateButton({
         -----------------------------------------------------------
         local function ReturnFurniture()
     local list = {}
+
+    -- folder market
     local market = workspace:FindFirstChild("MarketWyposazenie")
+    if not market then return list end
 
-    if not market then
-        warn("Folder Wyposazenie tidak ditemukan!")
-        return list
-    end
-
-    -- Rekursif scan semua folder
-    local function scanFolder(folder)
+    -- scan recursive
+    local function scan(folder)
         for _, v in ipairs(folder:GetChildren()) do
             if v:IsA("Model") then
+                -- cek apakah MODEL ini punya BasePart di mana saja (nested)
                 local part = v:FindFirstChildWhichIsA("BasePart", true)
                 if part then
                     table.insert(list, v.Name)
                 end
             elseif v:IsA("Folder") then
-                scanFolder(v)
+                scan(v)
             end
         end
     end
 
-    scanFolder(market)
+    scan(market)
     return list
 end
+
 
 
         -----------------------------------------------------------
