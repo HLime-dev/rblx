@@ -282,7 +282,7 @@ MainTab:CreateTextBox({
     end
 })
 
-SettingsTab:CreateButton({
+MainTab:CreateButton({
     Name = "Close GUI",
     Callback = function()
         Rayfield:Destroy()
