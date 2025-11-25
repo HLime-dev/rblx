@@ -202,6 +202,14 @@ MainTab:CreateButton({
                 GetFurniture()
             end
         end)
+
+          -- Tombol untuk Close Turtle GUI
+        turtleLibWindow:Button("Close Furniture GUI", function()
+            if turtleLibWindow then
+                turtleLibWindow:Destroy()
+                turtleLibWindow = nil
+            end
+        end)
     end
 })
 
