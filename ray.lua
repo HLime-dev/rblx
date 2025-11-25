@@ -316,3 +316,11 @@ CloseTab:CreateButton({
         TeleportService:Teleport(game.PlaceId, plr)
     end
 })
+
+local Tab = Window:CreateTab("Tab Example", "square-x")
+local Button = Tab:CreateButton({
+   Name = "Button Example",
+   Callback = function()
+   -- The function that takes place when the button is pressed
+   end,
+})
