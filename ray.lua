@@ -334,25 +334,25 @@ MainTab:CreateTextBox({
 })
 
 -------------------------------------------------------
+-------------------------------------------------------
 --==================== CLOSE TAB ====================--
 -------------------------------------------------------
-local CloseTab = Window:CreateTab("Close", 4483362458)
+local CloseTab = Window:CreateTab("Close", 4483362458) -- pastikan ID icon unik
 
--- Close GUI
+-- Tombol Close GUI
 CloseTab:CreateButton({
     Name = "Close GUI",
     Callback = function()
-        Window:Close()
+        -- Rayfield memiliki method Destroy
+        Rayfield:Destroy()
     end
 })
 
--- Rejoin Server
+-- Tombol Rejoin Server
 CloseTab:CreateButton({
     Name = "Rejoin Server",
     Callback = function()
         local TeleportService = game:GetService("TeleportService")
-        local PlaceId = game.PlaceId
-        TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
+        TeleportService:Teleport(game.PlaceId, game.Players.LocalPlayer)
     end
 })
-
