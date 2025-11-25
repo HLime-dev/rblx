@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC1",
-   LoadingTitle = "HaeX SC1",
+   Name = "DN SC2",
+   LoadingTitle = "HaeX SC2",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -230,53 +230,40 @@ MainTab:CreateButton({
         local selected = nil
 
         local function ReturnFurniture()
-    local Names = {}
+    local list = {}
+    local market = workspace:FindFirstChild("Wyposazenie")
 
-    -- Hanya ambil furniture yang berada DI MARKET (workspace.Wyposazenie)
-    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
-        
-        -- Market kategori folder
-        if category:IsA("Folder") then
-            for _, item in ipairs(category:GetChildren()) do
-                if item:IsA("Model") and item:FindFirstChildWhichIsA("BasePart") then
-                    table.insert(Names, item.Name)
-                end
+    if not market then
+        warn("Folder Wyposazenie tidak ditemukan!")
+        return list
+    end
+
+    for _, v in ipairs(market:GetChildren()) do
+        if v:IsA("Model") then
+            -- Furniture harus punya BasePart (objek fisik)
+            local part = v:FindFirstChildWhichIsA("BasePart", true)
+            if part then
+                table.insert(list, v.Name)
             end
-
-        -- Di luar folder tetapi MASIH di Wyposazenie
-        elseif category:IsA("Model") and category:FindFirstChildWhichIsA("BasePart") then
-            table.insert(Names, category.Name)
         end
     end
 
-    return Names
+    return list
 end
 
 
-local function GetFurniture()
-    -- Loop hanya pada MARKET
-    for _, category in ipairs(workspace.Wyposazenie:GetChildren()) do
-        
-        if category:IsA("Folder") then
-            for _, item in ipairs(category:GetChildren()) do
-                if item:IsA("Model") and item.Name == selected then
-                    -- Pastikan furniture masih ada (belum dipickup)
-                    if item.Parent == category then
-                        pcall(function()
-                            RS.PickupItemEvent:FireServer(item)
-                        end)
-                        return true
-                    end
-                end
-            end
 
-        elseif category:IsA("Model") and category.Name == selected then
-            if category.Parent == workspace.Wyposazenie then
-                pcall(function()
-                    RS.PickupItemEvent:FireServer(category)
-                end)
-                return true
-            end
+local function GetFurniture(selected)
+    if not selected then return false end
+    local market = workspace:FindFirstChild("Wyposazenie")
+    if not market then return false end
+
+    for _, v in ipairs(market:GetChildren()) do
+        if v:IsA("Model") and v.Name == selected then
+            pcall(function()
+                RS.PickupItemEvent:FireServer(v)
+            end)
+            return true
         end
     end
 
@@ -292,10 +279,24 @@ end
             if selected then GetFurniture() end
         end)
 
-         m:Button("Teleport to Selected Furniture", function()
-    if not selected then return end
+        local function TeleportToFurniture(selected)
     local hrp = GetHRP()
-    if not hrp then return end
+    if not selected or not hrp then return end
+
+    local market = workspace:FindFirstChild("Wyposazenie")
+    if not market then return end
+
+    for _, v in ipairs(market:GetChildren()) do
+        if v:IsA("Model") and v.Name == selected then
+            local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+            if part then
+                hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+            end
+            return
+        end
+    end
+end
+
 
     -- Hanya cek furniture di MARKET
     local market = workspace:FindFirstChild("Wyposazenie")
