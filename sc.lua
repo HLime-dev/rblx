@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC3",
-   LoadingTitle = "HaeX SC3",
+   Name = "DN SC4",
+   LoadingTitle = "HaeX SC4",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -233,63 +233,100 @@ MainTab:CreateButton({
         -- RETURN FURNITURE (Market Only)
         -----------------------------------------------------------
         local function ReturnFurniture()
-            local list = {}
-            local market = workspace:FindFirstChild("Wyposazenie")
-        
-            if not market then
-                warn("Folder Wyposazenie tidak ditemukan!")
-                return list
-            end
-        
-            for _, v in ipairs(market:GetChildren()) do
-                if v:IsA("Model") and v:FindFirstChildWhichIsA("BasePart", true) then
+    local list = {}
+    local market = workspace:FindFirstChild("Wyposazenie")
+
+    if not market then
+        warn("Folder Wyposazenie tidak ditemukan!")
+        return list
+    end
+
+    -- Rekursif scan semua folder
+    local function scanFolder(folder)
+        for _, v in ipairs(folder:GetChildren()) do
+            if v:IsA("Model") then
+                local part = v:FindFirstChildWhichIsA("BasePart", true)
+                if part then
                     table.insert(list, v.Name)
                 end
+            elseif v:IsA("Folder") then
+                scanFolder(v)
             end
-        
-            return list
         end
+    end
+
+    scanFolder(market)
+    return list
+end
+
 
         -----------------------------------------------------------
         -- PICKUP FURNITURE
         -----------------------------------------------------------
-        local function GetFurniture(sel)
-            if not sel then return false end
-            local market = workspace:FindFirstChild("Wyposazenie")
-            if not market then return false end
-        
-            for _, v in ipairs(market:GetChildren()) do
-                if v:IsA("Model") and v.Name == sel then
-                    pcall(function()
-                        RS.PickupItemEvent:FireServer(v)
-                    end)
-                    return true
-                end
+      local function GetFurniture(sel)
+    if not sel then return false end
+    local market = workspace:FindFirstChild("Wyposazenie")
+    if not market then return false end
+
+    local target = nil
+
+    -- Cari model secara rekursif
+    local function find(folder)
+        for _, v in ipairs(folder:GetChildren()) do
+            if v:IsA("Model") and v.Name == sel then
+                target = v
+                return
+            elseif v:IsA("Folder") then
+                find(v)
             end
-            return false
         end
+    end
+
+    find(market)
+
+    if target then
+        pcall(function()
+            RS.PickupItemEvent:FireServer(target)
+        end)
+        return true
+    end
+
+    return false
+end
 
         -----------------------------------------------------------
         -- TELEPORT TO FURNITURE (Market Only)
         -----------------------------------------------------------
         local function TeleportToFurniture(sel)
-            if not sel then return end
-            local hrp = GetHRP()
-            if not hrp then return end
+    if not sel then return end
+    local hrp = GetHRP()
+    local market = workspace:FindFirstChild("Wyposazenie")
 
-            local market = workspace:FindFirstChild("Wyposazenie")
-            if not market then return end
+    if not hrp or not market then return end
 
-            for _, v in ipairs(market:GetChildren()) do
-                if v:IsA("Model") and v.Name == sel then
-                    local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
-                    if part then
-                        hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
-                    end
-                    return
-                end
+    local target = nil
+
+    local function find(folder)
+        for _, v in ipairs(folder:GetChildren()) do
+            if v:IsA("Model") and v.Name == sel then
+                target = v
+                return
+            elseif v:IsA("Folder") then
+                find(v)
             end
         end
+    end
+
+    find(market)
+
+    if target then
+        local part = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+        end
+    end
+end
+
 
         -----------------------------------------------------------
         -- GUI COMPONENTS
