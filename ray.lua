@@ -332,3 +332,27 @@ MainTab:CreateTextBox({
         end
     end
 })
+
+-------------------------------------------------------
+--==================== CLOSE TAB ====================--
+-------------------------------------------------------
+local CloseTab = Window:CreateTab("Close", 4483362458)
+
+-- Close GUI
+CloseTab:CreateButton({
+    Name = "Close GUI",
+    Callback = function()
+        Window:Close()
+    end
+})
+
+-- Rejoin Server
+CloseTab:CreateButton({
+    Name = "Rejoin Server",
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local PlaceId = game.PlaceId
+        TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
+    end
+})
+
