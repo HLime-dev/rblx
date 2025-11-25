@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC4",
-   LoadingTitle = "HaeX SC4",
+   Name = "DN SC5",
+   LoadingTitle = "HaeX SC5",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -319,6 +319,7 @@ TeleportTab:CreateButton({
 })
 
 -- Variabel untuk menyimpan player yang dipilih
+-- Variabel untuk menyimpan player yang dipilih
 local selectedPlayer = nil
 
 -- Ambil daftar semua player kecuali local player
@@ -333,7 +334,7 @@ local function GetPlayerList()
 end
 
 -- Dropdown untuk pilih player
-TeleportTab:CreateDropdown({
+local playerDropdown = TeleportTab:CreateDropdown({
     Name = "Select Player",
     Options = GetPlayerList(),
     Callback = function(option)
@@ -345,30 +346,32 @@ TeleportTab:CreateDropdown({
 TeleportTab:CreateButton({
     Name = "Teleport to Selected Player",
     Callback = function()
-        if selectedPlayer then
-            local target = Players:FindFirstChild(selectedPlayer)
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = GetHRP()
-                if hrp then
-                    hrp.CFrame = target.Character.HumanoidRootPart.CFrame
-                end
+        if not selectedPlayer then
+            warn("Belum memilih player.")
+            return
+        end
+
+        local target = Players:FindFirstChild(selectedPlayer)
+        if target and target.Character then
+            local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
+            local hrp = GetHRP()
+            if tHRP and hrp then
+                -- Offset sedikit agar tidak nabrak player target
+                hrp.CFrame = tHRP.CFrame + Vector3.new(0,5,0)
             else
-                warn("Player tidak tersedia / belum spawn.")
+                warn("Target belum spawn atau HumanoidRootPart tidak ada.")
             end
         else
-            warn("Belum memilih player.")
+            warn("Player tidak tersedia / belum spawn.")
         end
     end
 })
 
--- Optional: Refresh Dropdown (jika ada player baru join)
+-- Tombol refresh dropdown untuk update player baru
 TeleportTab:CreateButton({
     Name = "Refresh Player List",
     Callback = function()
-        local dropdown = TeleportTab:FindFirstChild("Select Player")
-        if dropdown then
-            dropdown:UpdateOptions(GetPlayerList())
-        end
+        playerDropdown:UpdateOptions(GetPlayerList())
     end
 })
 
@@ -378,6 +381,12 @@ TeleportTab:CreateButton({
 -------------------------------------------------------
 local SettingsTab = Window:CreateTab("Settings", 4483362458) -- pastikan icon unik
 
-
+-- Close GUI (tetap di Main)
+SettingsTab:CreateButton({
+    Name = "Close GUI",
+    Callback = function()
+        Rayfield:Destroy()
+    end
+})
 
 
