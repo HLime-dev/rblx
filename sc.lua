@@ -285,8 +285,10 @@ MainTab:CreateTextBox({
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
-local SettingsTab = Window:CreateTab("Settings", 4483362461)
+--==================== SETTINGS TAB =================--
+local SettingsTab = Window:CreateTab("Settings", 4483362462) -- ganti icon ke angka lain unik
 
+-- Tombol Close GUI
 SettingsTab:CreateButton({
     Name = "Close GUI",
     Callback = function()
@@ -294,8 +296,10 @@ SettingsTab:CreateButton({
     end
 })
 
+-- Label Info
 SettingsTab:CreateLabel("Press LeftControl to Hide UI", Color3.fromRGB(127, 143, 166))
 SettingsTab:CreateLabel("~ t.me/arceusxscripts", Color3.fromRGB(127, 143, 166))
 
--- Bind Key untuk hide/show GUI
+-- Keybind hide/show UI
 Window:BindToKey("LeftControl")
+
