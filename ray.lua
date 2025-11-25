@@ -144,21 +144,13 @@ MainTab:CreateButton({
 
 -- Bring Furniture
 -- Bring Selected Furniture
--- Tambahkan di tab Main
 MainTab:CreateButton({
     Name = "Open Furniture GUI",
     Callback = function()
-        -- Load Turtle-Lib GUI untuk furniture
         local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
         local m = lib:Window("Furniture")
-        local players = game:GetService("Players")
-        local plr = players.LocalPlayer
-
-        -- Helper
-        local function GetChar() return plr.Character or plr.CharacterAdded:Wait() end
-
-        -- Variabel furniture
         local selected = nil
+
         local function ReturnFurniture()
             local Names = {}
             for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
@@ -180,19 +172,18 @@ MainTab:CreateButton({
                 if furniture:IsA("Folder") then
                     for _, interno in pairs(furniture:GetChildren()) do
                         if interno:IsA("Model") and interno.Name == selected then
-                            game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+                            RS.PickupItemEvent:FireServer(interno)
                             return true
                         end
                     end
                 elseif furniture:IsA("Model") and furniture.Name == selected then
-                    game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
+                    RS.PickupItemEvent:FireServer(furniture)
                     return true
                 end
             end
             return false
         end
 
-        -- Dropdown dan Button Turtle-Lib
         m:Dropdown("Selected Furniture", ReturnFurniture(), function(option)
             selected = option
         end)
@@ -203,11 +194,10 @@ MainTab:CreateButton({
             end
         end)
 
-          -- Tombol untuk Close Turtle GUI
-        turtleLibWindow:Button("Close Furniture GUI", function()
-            if turtleLibWindow then
-                turtleLibWindow:Destroy()
-                turtleLibWindow = nil
+        -- Tombol Close Turtle GUI
+        m:Button("Close Furniture GUI", function()
+            if m then
+                m:Destroy()
             end
         end)
     end
