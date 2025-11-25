@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC2",
-   LoadingTitle = "HaeX SC",
+   Name = "DN SC3",
+   LoadingTitle = "HaeX SC3",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -77,12 +77,22 @@ UtilityTab:CreateToggle({
             task.spawn(function()
                 while getgenv().wallhack do
                     for _, model in ipairs(workspace:GetChildren()) do
-                        if model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then
-                            if not model:FindFirstChild("Highlight") then
+                        if model:IsA("Model") then
+                            local hasHL = model:FindFirstChild("WallhackHL")
+                            if not hasHL then
                                 local hl = Instance.new("Highlight")
-                                hl.Adornee = model
-                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- Tembus tembok
-                                hl.Parent = model
+                                hl.Name = "WallhackHL"
+                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                hl.FillColor = Color3.fromRGB(0,255,0)
+                                hl.FillTransparency = 0.5
+                                hl.OutlineTransparency = 0
+                                for _, part in ipairs(model:GetDescendants()) do
+                                    if part:IsA("BasePart") then
+                                        hl.Adornee = part
+                                        hl.Parent = model
+                                        break
+                                    end
+                                end
                             end
                         end
                     end
@@ -91,9 +101,8 @@ UtilityTab:CreateToggle({
             end)
         else
             for _, model in ipairs(workspace:GetChildren()) do
-                if model:IsA("Model") and model:FindFirstChild("Highlight") then
-                    model.Highlight:Destroy()
-                end
+                local hl = model:FindFirstChild("WallhackHL")
+                if hl then hl:Destroy() end
             end
         end
     end
@@ -104,8 +113,6 @@ UtilityTab:CreateToggle({
 -------------------------------------------------------
 local MainTab = Window:CreateTab("Main", 4483362458)
 
--- (Isi script MainTab sama seperti sebelumnya)
--- Noclip, Collect/Drop Food, Furniture GUI, Sound Spam, Monsters ESP, Teleports, Close GUI
 -- Noclip
 MainTab:CreateToggle({
     Name = "Noclip",
@@ -279,8 +286,20 @@ MainTab:CreateToggle({
     end
 })
 
--- Teleports
+-- Close GUI (tetap di Main)
 MainTab:CreateButton({
+    Name = "Close GUI",
+    Callback = function()
+        Rayfield:Destroy()
+    end
+})
+
+-------------------------------------------------------
+--==================== TELEPORT TAB ==================--
+-------------------------------------------------------
+local TeleportTab = Window:CreateTab("Teleport", 4483362458)
+
+TeleportTab:CreateButton({
     Name = "Teleport to Bunker",
     Callback = function()
         local hrp = GetHRP()
@@ -291,7 +310,7 @@ MainTab:CreateButton({
     end
 })
 
-MainTab:CreateButton({
+TeleportTab:CreateButton({
     Name = "Teleport to Market",
     Callback = function()
         local hrp = GetHRP()
@@ -299,7 +318,7 @@ MainTab:CreateButton({
     end
 })
 
-MainTab:CreateTextBox({
+TeleportTab:CreateTextBox({
     Name = "Teleport to Player",
     PlaceholderText = "Player Name",
     Callback = function(text)
@@ -315,12 +334,6 @@ MainTab:CreateTextBox({
     end
 })
 
-MainTab:CreateButton({
-    Name = "Close GUI",
-    Callback = function()
-        Rayfield:Destroy()
-    end
-})
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
 -------------------------------------------------------
