@@ -144,21 +144,43 @@ MainTab:CreateButton({
 
 -- Bring Furniture
 -- Bring Selected Furniture
+-- Bring Selected Furniture
 local selectedFurniture = nil
+
 local function ReturnFurniture()
-    local list = {}
-    for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, model in ipairs(folder:GetChildren()) do
-                if model:IsA("Model") and not table.find(list, model.Name) then
-                    table.insert(list, model.Name)
+    local Names = {}
+    for _, item in pairs(workspace.Wyposazenie:GetChildren()) do
+        if item:IsA("Folder") then
+            for _, interno in pairs(item:GetChildren()) do
+                if interno:IsA("Model") and not table.find(Names, interno.Name) then
+                    table.insert(Names, interno.Name)
                 end
             end
+        elseif item:IsA("Model") and not table.find(Names, item.Name) then
+            table.insert(Names, item.Name)
         end
     end
-    return list
+    return Names
 end
 
+local function GetFurniture()
+    for _, furniture in pairs(workspace.Wyposazenie:GetChildren()) do
+        if furniture:IsA("Folder") then
+            for _, interno in pairs(furniture:GetChildren()) do
+                if interno:IsA("Model") and interno.Name == selectedFurniture then
+                    game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(interno)
+                    return true
+                end
+            end
+        elseif furniture:IsA("Model") and furniture.Name == selectedFurniture then
+            game:GetService("ReplicatedStorage").PickupItemEvent:FireServer(furniture)
+            return true
+        end
+    end
+    return false
+end
+
+-- Dropdown
 MainTab:CreateDropdown({
     Name = "Selected Furniture",
     Options = ReturnFurniture(),
@@ -167,43 +189,15 @@ MainTab:CreateDropdown({
     end
 })
 
+-- Button untuk ambil furniture
 MainTab:CreateButton({
     Name = "Bring Selected Furniture",
     Callback = function()
-        if not selectedFurniture then return end
-        local hrp = GetHRP()
-        if not hrp then return end
-        local originalPos = hrp.CFrame
-        local found = false
-
-        -- Cari furniture di dalam market saja (folder di Wyposazenie)
-        for _, folder in ipairs(workspace.Wyposazenie:GetChildren()) do
-            if folder:IsA("Folder") then
-                for _, model in ipairs(folder:GetChildren()) do
-                    if model:IsA("Model") and model.Name == selectedFurniture then
-                        -- Teleport sementara ke furniture
-                        hrp.CFrame = model:GetModelCFrame() + Vector3.new(0,5,0)
-                        task.wait(0.2)
-                        -- Fire pickup
-                        pcall(function()
-                            if RS:FindFirstChild("PickupItemEvent") then
-                                RS.PickupItemEvent:FireServer(model)
-                            end
-                        end)
-                        task.wait(0.2)
-                        found = true
-                        break
-                    end
-                end
-            end
-            if found then break end
+        if selectedFurniture ~= nil then
+            GetFurniture()
         end
-
-        -- Kembali ke posisi awal
-        hrp.CFrame = originalPos
     end
 })
-
 
 -- Sound Spam
 MainTab:CreateToggle({
@@ -214,14 +208,15 @@ MainTab:CreateToggle({
         task.spawn(function()
             while getgenv().sound_spam do
                 pcall(function()
-                    RS.SoundEvent:FireServer("Drink")
-                    RS.SoundEvent:FireServer("Eat")
+                    game:GetService("ReplicatedStorage"):WaitForChild("SoundEvent"):FireServer("Drink")
+                    game:GetService("ReplicatedStorage"):WaitForChild("SoundEvent"):FireServer("Eat")
                 end)
                 task.wait()
             end
         end)
     end
 })
+
 
 -- Monsters ESP
 MainTab:CreateToggle({
