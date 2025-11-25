@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC4",
-   LoadingTitle = "HaeX SC4",
+   Name = "DN SC5",
+   LoadingTitle = "HaeX SC5",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
