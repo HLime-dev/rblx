@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC11",
-   LoadingTitle = "HaeX SC11",
+   Name = "DN SC12",
+   LoadingTitle = "HaeX SC12",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -642,14 +642,42 @@ local function CreateFurnitureGUI()
     end)
 
     -- Tombol Teleport Bunker
-    furnitureGUIWindow:Button("Teleport to Selected Bunker Furniture", function()
-        if selectedBunkerFurniture then
-            local model = FindModelByName(selectedBunkerFurniture, true)
-            TeleportToFurniture(model)
-        else
-            warn("Pilih furniture bunker dulu!")
+    -- Tombol Teleport sementara 5 detik
+m:Button("Teleport to Selected Furniture (5s)", function()
+    if not selectedBunkerFurniture then
+        warn("Pilih furniture dulu!")
+        return
+    end
+
+    local hrp = GetHRP()
+    if not hrp then return end
+
+    -- Simpan posisi semula
+    local originalCFrame = hrp.CFrame
+
+    -- Cari model
+    local model = FindModelInBunkerByName(selectedBunkerFurniture)
+    if not model then
+        warn("Furniture tidak ada di bunker!")
+        return
+    end
+
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if not part then return end
+
+    -- Teleport ke furniture
+    hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
+
+    -- Tunggu 5 detik, lalu kembali
+    task.delay(5, function()
+        if hrp then
+            pcall(function()
+                hrp.CFrame = originalCFrame
+            end)
         end
     end)
+end)
+
 
     -- Tombol Bring Market
     furnitureGUIWindow:Button("Bring Selected Market Furniture", function()
