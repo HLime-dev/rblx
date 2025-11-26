@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC13",
-   LoadingTitle = "HaeX SC13",
+   Name = "DN SC11",
+   LoadingTitle = "HaeX SC11",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -61,7 +61,6 @@ UtilityTab:CreateSlider({
     Callback = function(val)
         local char = GetChar()
         if char and char:FindFirstChild("Humanoid") then char.Humanoid.JumpPower = val end
-        -- pastikan saat respawn
         plr.CharacterAdded:Connect(function(c)
             local ok, hum = pcall(function() return c:WaitForChild("Humanoid", 5) end)
             if ok and hum then
@@ -233,40 +232,77 @@ UtilityTab:CreateToggle({
     end
 })
 
--------------------------------------------------------
---==================== TELEPORT FURNITURE WITH RETURN 5 DETIK ==================--
--------------------------------------------------------
-local function TeleportToFurnitureWithReturn(model)
-    local hrp = GetHRP()
-    if not hrp or not model then return end
-    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-    if part then
-        local originalCFrame = hrp.CFrame
-        hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
-        task.spawn(function()
-            task.wait(5)
-            if hrp then
-                hrp.CFrame = originalCFrame
+--==================== FURNITURE GUI ====================--
+local selectedBunkerFurniture, selectedMarketFurniture, furnitureGUIWindow
+
+local function SafeReturnTable(func)
+    local ok, result = pcall(func)
+    return (ok and result) or {}
+end
+
+local function ReturnAllMarketFurniture()
+    return SafeReturnTable(function()
+        local list, seen = {}, {}
+        local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+        if folder then
+            local function scan(f)
+                for _, c in ipairs(f:GetChildren()) do
+                    if c:IsA("Model") and not seen[c.Name] then
+                        table.insert(list, c.Name)
+                        seen[c.Name] = true
+                    elseif c:IsA("Folder") then scan(c) end
+                end
             end
-        end)
-    end
+            scan(folder)
+        end
+        table.sort(list)
+        return list
+    end)
 end
 
--- Pickup furniture
-local function PickupFurniture(model)
-    if model then
-        pcall(function() RS.PickupItemEvent:FireServer(model) end)
-    end
+local function ReturnBunkerFurnitureList()
+    return SafeReturnTable(function()
+        local list, seen = {}, {}
+        local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+        local bunkerFolder = workspace:FindFirstChild("Bunkers")
+        local bunkerModel = bunkerFolder and bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+        local bunkerCF = bunkerModel and (bunkerModel.PrimaryPart or bunkerModel:FindFirstChildWhichIsA("BasePart"))
+        if not folder or not bunkerCF then return list end
+
+        local function isInBunker(part)
+            local size = Vector3.new(50,50,50)
+            local minBound = bunkerCF.Position - size/2
+            local maxBound = bunkerCF.Position + size/2
+            local pos = part.Position
+            return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+                   (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+                   (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+        end
+
+        local function scan(f)
+            for _, c in ipairs(f:GetChildren()) do
+                if c:IsA("Model") and not seen[c.Name] then
+                    local part = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart", true)
+                    if part and isInBunker(part) then
+                        table.insert(list, c.Name)
+                        seen[c.Name] = true
+                    end
+                elseif c:IsA("Folder") then scan(c) end
+            end
+        end
+        scan(folder)
+        table.sort(list)
+        return list
+    end)
 end
 
--- Helper untuk Wyposazenie / Bunker
 local function FindModelByName(name, onlyInBunker)
     local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-    if not folder then return nil end
-
     local bunkerFolder = workspace:FindFirstChild("Bunkers")
     local bunkerModel = bunkerFolder and bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
     local bunkerCF = bunkerModel and (bunkerModel.PrimaryPart or bunkerModel:FindFirstChildWhichIsA("BasePart"))
+    local found
+    if not folder then return nil end
 
     local function isInBunker(part)
         if not bunkerCF then return false end
@@ -279,7 +315,6 @@ local function FindModelByName(name, onlyInBunker)
                (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
     end
 
-    local found = nil
     local function scan(f)
         for _, c in ipairs(f:GetChildren()) do
             if c:IsA("Model") and c.Name == name then
@@ -291,91 +326,26 @@ local function FindModelByName(name, onlyInBunker)
                         found = c return
                     end
                 end
-            elseif c:IsA("Folder") then
-                scan(c)
-                if found then return end
-            end
+            elseif c:IsA("Folder") then scan(c) if found then return end end
         end
     end
     scan(folder)
     return found
 end
 
--------------------------------------------------------
---==================== FURNITURE GUI (Bunker + Market) ==================--
--------------------------------------------------------
-local selectedBunkerFurniture = nil
-local selectedMarketFurniture = nil
-local furnitureGUIWindow = nil
-
-local function ReturnAllMarketFurniture()
-    local list, seen = {}, {}
-    local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-    if not folder then return list end
-
-    local function scan(f)
-        for _, c in ipairs(f:GetChildren()) do
-            if c:IsA("Model") and c:FindFirstChildWhichIsA("BasePart", true) then
-                if not seen[c.Name] then
-                    table.insert(list, c.Name)
-                    seen[c.Name] = true
-                end
-            elseif c:IsA("Folder") then
-                scan(c)
-            end
-        end
-    end
-
-    scan(folder)
-    table.sort(list)
-    return list
+local function TeleportToFurniture(model)
+    local hrp = GetHRP()
+    if not hrp or not model then return end
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if part then hrp.CFrame = part.CFrame + Vector3.new(0,5,0) end
 end
 
-local function ReturnBunkerFurnitureList()
-    local list, seen = {}, {}
-    local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-    if not folder then return list end
-
-    local bunkerFolder = workspace:FindFirstChild("Bunkers")
-    local bunkerModel = bunkerFolder and bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
-    local bunkerCF = bunkerModel and (bunkerModel.PrimaryPart or bunkerModel:FindFirstChildWhichIsA("BasePart"))
-    if not bunkerCF then return list end
-
-    local function isInBunker(part)
-        local size = Vector3.new(50,50,50)
-        local minBound = bunkerCF.Position - size/2
-        local maxBound = bunkerCF.Position + size/2
-        local pos = part.Position
-        return (pos.X >= minBound.X and pos.X <= maxBound.X) and
-               (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
-               (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
-    end
-
-    local function scan(f)
-        for _, c in ipairs(f:GetChildren()) do
-            if c:IsA("Model") and c:FindFirstChildWhichIsA("BasePart", true) then
-                local part = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart", true)
-                if part and isInBunker(part) and not seen[c.Name] then
-                    table.insert(list, c.Name)
-                    seen[c.Name] = true
-                end
-            elseif c:IsA("Folder") then
-                scan(c)
-            end
-        end
-    end
-
-    scan(folder)
-    table.sort(list)
-    return list
+local function PickupFurniture(model)
+    if model then pcall(function() RS.PickupItemEvent:FireServer(model) end) end
 end
 
 local function CreateFurnitureGUI()
-    if furnitureGUIWindow and furnitureGUIWindow.Destroy then
-        furnitureGUIWindow:Destroy()
-        furnitureGUIWindow = nil
-    end
-
+    if furnitureGUIWindow and furnitureGUIWindow.Destroy then furnitureGUIWindow:Destroy() end
     local ok, lib = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
     end)
@@ -386,7 +356,6 @@ local function CreateFurnitureGUI()
     local bunkerDropdown = furnitureGUIWindow:Dropdown("Bunker Furniture", ReturnBunkerFurnitureList(), function(option)
         selectedBunkerFurniture = option
     end)
-
     local marketDropdown = furnitureGUIWindow:Dropdown("Market Furniture", ReturnAllMarketFurniture(), function(option)
         selectedMarketFurniture = option
     end)
@@ -401,42 +370,40 @@ local function CreateFurnitureGUI()
     furnitureGUIWindow:Button("Bring Selected Bunker Furniture", function()
         if selectedBunkerFurniture then
             local model = FindModelByName(selectedBunkerFurniture, true)
-            PickupFurniture(model)
+            if model then PickupFurniture(model) else warn("Furniture tidak ada di bunker!") end
         else warn("Pilih furniture bunker dulu!") end
     end)
 
     furnitureGUIWindow:Button("Teleport to Selected Bunker Furniture", function()
         if selectedBunkerFurniture then
             local model = FindModelByName(selectedBunkerFurniture, true)
-            TeleportToFurnitureWithReturn(model)
+            TeleportToFurniture(model)
         else warn("Pilih furniture bunker dulu!") end
     end)
 
     furnitureGUIWindow:Button("Bring Selected Market Furniture", function()
         if selectedMarketFurniture then
             local model = FindModelByName(selectedMarketFurniture, false)
-            PickupFurniture(model)
+            if model then PickupFurniture(model) else warn("Furniture market tidak ditemukan!") end
         else warn("Pilih furniture market dulu!") end
     end)
 
     furnitureGUIWindow:Button("Teleport to Selected Market Furniture", function()
         if selectedMarketFurniture then
             local model = FindModelByName(selectedMarketFurniture, false)
-            TeleportToFurnitureWithReturn(model)
+            TeleportToFurniture(model)
         else warn("Pilih furniture market dulu!") end
     end)
 
     furnitureGUIWindow:Button("Close GUI", function()
-        if furnitureGUIWindow and furnitureGUIWindow.Destroy then pcall(function() furnitureGUIWindow:Destroy() end) end
+        if furnitureGUIWindow and furnitureGUIWindow.Destroy then furnitureGUIWindow:Destroy() end
         furnitureGUIWindow = nil
     end)
 end
 
 MainTab:CreateButton({
     Name = "Open Furniture GUI (Bunker + Market)",
-    Callback = function()
-        CreateFurnitureGUI()
-    end
+    Callback = CreateFurnitureGUI
 })
 
 -------------------------------------------------------
@@ -463,14 +430,11 @@ TeleportTab:CreateButton({
     end
 })
 
--- Player teleport dropdown
 local selectedPlayer = nil
 local function GetPlayerList()
     local list = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= plr then
-            table.insert(list, p.Name)
-        end
+        if p ~= plr then table.insert(list, p.Name) end
     end
     return list
 end
@@ -478,30 +442,20 @@ end
 local playerDropdown = TeleportTab:CreateDropdown({
     Name = "Select Player",
     Options = GetPlayerList(),
-    Callback = function(option)
-        selectedPlayer = option
-    end
+    Callback = function(option) selectedPlayer = option end
 })
 
 TeleportTab:CreateButton({
     Name = "Teleport to Selected Player",
     Callback = function()
-        if not selectedPlayer then
-            warn("Belum memilih player.")
-            return
-        end
+        if not selectedPlayer then warn("Belum memilih player.") return end
         local target = Players:FindFirstChild(selectedPlayer)
         if target and target.Character then
             local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
             local hrp = GetHRP()
-            if tHRP and hrp then
-                hrp.CFrame = tHRP.CFrame + Vector3.new(0,5,0)
-            else
-                warn("Target belum spawn atau HumanoidRootPart tidak ada.")
-            end
-        else
-            warn("Player tidak tersedia / belum spawn.")
-        end
+            if tHRP and hrp then hrp.CFrame = tHRP.CFrame + Vector3.new(0,5,0)
+            else warn("Target belum spawn atau HumanoidRootPart tidak ada.") end
+        else warn("Player tidak tersedia / belum spawn.") end
     end
 })
 
@@ -513,12 +467,12 @@ TeleportTab:CreateButton({
 })
 
 -------------------------------------------------------
---==================== SETTINGS TAB ==================--
+--==================== SETTINGS TAB =================--
 -------------------------------------------------------
 local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
 getgenv().nightMonsterESP = false
-UtilityTab:CreateToggle({
+SettingsTab:CreateToggle({
     Name = "Night Monsters ESP",
     CurrentValue = false,
     Callback = function(state)
@@ -526,19 +480,22 @@ UtilityTab:CreateToggle({
         if state then
             task.spawn(function()
                 while getgenv().nightMonsterESP do
-                    for _, mob in ipairs(workspace:GetDescendants()) do
-                        if mob:IsA("Model") and mob.Name:find("Monster") then
-                            if not mob:FindFirstChild("ESP") then
-                                local p = mob:FindFirstChildWhichIsA("BasePart", true)
-                                if p then
-                                    local hl = Instance.new("Highlight")
-                                    hl.Name = "ESP"
-                                    hl.FillColor = Color3.fromRGB(255,0,0)
-                                    hl.FillTransparency = 0.5
-                                    hl.OutlineTransparency = 0
-                                    hl.Adornee = p
-                                    hl.Parent = mob
-                                end
+                    local nightFolder
+                    for _, f in ipairs(workspace:GetChildren()) do
+                        if f:IsA("Folder") and f.Name:match("Night") then
+                            nightFolder = f break
+                        end
+                    end
+                    if nightFolder then
+                        for _, m in ipairs(nightFolder:GetChildren()) do
+                            if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") and not m:FindFirstChild("NM_ESP") then
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "NM_ESP"
+                                hl.FillColor = Color3.fromRGB(255,0,0)
+                                hl.FillTransparency = 0.5
+                                hl.OutlineTransparency = 0
+                                hl.Adornee = m:FindFirstChild("HumanoidRootPart")
+                                hl.Parent = m
                             end
                         end
                     end
@@ -546,9 +503,11 @@ UtilityTab:CreateToggle({
                 end
             end)
         else
-            for _, mob in ipairs(workspace:GetDescendants()) do
-                local hl = mob:FindFirstChild("ESP")
-                if hl then pcall(function() hl:Destroy() end) end
+            for _, f in ipairs(workspace:GetChildren()) do
+                for _, m in ipairs(f:GetChildren()) do
+                    local hl = m:FindFirstChild("NM_ESP")
+                    if hl then pcall(function() hl:Destroy() end) end
+                end
             end
         end
     end
