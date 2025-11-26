@@ -1,22 +1,20 @@
--- Nama file hasil scan
-local filename = "workspace_scan.txt"
+local HttpService = game:GetService("HttpService")
 
--- Fungsi rekursif untuk scan folder
-local function scanFolder(obj, indent)
-    indent = indent or ""
-    local result = indent .. obj.Name .. " (" .. obj.ClassName .. ")\n"
-
-    for _, child in ipairs(obj:GetChildren()) do
-        result = result .. scanFolder(child, indent .. "  ")
+MainTab:CreateButton({
+    Name = "Copy Points JSON",
+    Callback = function()
+        if #markedPoints < 4 then
+            warn("Tandai 4 titik dulu!")
+            return
+        end
+        local data = {}
+        for i, pos in ipairs(markedPoints) do
+            data[i] = {x = pos.X, y = pos.Y, z = pos.Z}
+        end
+        local json = HttpService:JSONEncode(data)
+        
+        -- copy ke clipboard (Delta mendukung fungsi copy)
+        pcall(function() setclipboard(json) end)
+        print("Points copied to clipboard!")
     end
-    return result
-end
-
--- Mulai scan Workspace
-local output = "=== Workspace Folder Scan ===\n\n"
-output = output .. scanFolder(workspace)
-
--- Simpan ke file lokal
-writefile(filename, output)
-
-print("[SCAN COMPLETE] File disimpan sebagai:", filename)
+})
