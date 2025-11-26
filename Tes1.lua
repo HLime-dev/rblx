@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN2",
+   Name = "DN3",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -132,7 +132,8 @@ MainTab:CreateButton({
     end
 })
 
--- Furniture GUI (CLEAN)
+----market furn------
+
 MainTab:CreateButton({
     Name = "Open Market Furniture GUI",
     Callback = function()
@@ -148,61 +149,71 @@ MainTab:CreateButton({
         local selected = nil
 
         -----------------------------------------------------------
-        -- Market folder detection (flexible)
+        -- MARKET BOUNDARIES (POLYGON)
+        -----------------------------------------------------------
+        local MarketPoints = {
+            Vector2.new(68.7, -149.3),
+            Vector2.new(-160.4, -145.7),
+            Vector2.new(-166.9, 154.8),
+            Vector2.new(71.1, 158.7)
+        }
+
+        local function PointInPolygon(point, polygon)
+            local inside = false
+            local j = #polygon
+            for i = 1, #polygon do
+                local xi, zi = polygon[i].X, polygon[i].Y
+                local xj, zj = polygon[j].X, polygon[j].Y
+                local intersect = ((zi > point.Y) ~= (zj > point.Y)) and
+                    (point.X < (xj - xi) * (point.Y - zi) / (zj - zi + 0.0001) + xi)
+                if intersect then
+                    inside = not inside
+                end
+                j = i
+            end
+            return inside
+        end
+
+        local function IsInsideMarket(part)
+            local pos = part.Position
+            local point = Vector2.new(pos.X, pos.Z)
+            return PointInPolygon(point, MarketPoints)
+        end
+
+        -----------------------------------------------------------
+        -- Market folder detection
         -----------------------------------------------------------
         local function GetMarketFolder()
-            -- Prioritas nama yang umum
             local candidates = {
-                "MarketWyposazenie",
-                "MarketWypo",
-                "Wyposazenie",
-                "MarketWyposzenie",
-                "MarketWypos",
+                "MarketWyposazenie", "MarketWypo", "Wyposazenie",
+                "MarketWyposzenie", "MarketWypos",
             }
-
             for _, name in ipairs(candidates) do
                 if workspace:FindFirstChild(name) then
-                    return workspace:FindFirstChild(name)
+                    return workspace[name]
                 end
             end
-
-            -- Cari folder yang mengandung "Wyposazenie" atau berakhiran "_Wyposazenie" (multiple maps)
             for _, v in ipairs(workspace:GetChildren()) do
                 if v:IsA("Folder") and v.Name:match("Wyposazenie") then
                     return v
                 end
             end
-
-            -- fallback: cari folder dengan banyak model (kemungkinan market)
-            for _, v in ipairs(workspace:GetChildren()) do
-                if v:IsA("Folder") then
-                    local modelCount = 0
-                    for _, c in ipairs(v:GetChildren()) do
-                        if c:IsA("Model") then modelCount = modelCount + 1 end
-                    end
-                    if modelCount >= 3 then
-                        return v
-                    end
-                end
-            end
-
             return nil
         end
 
         -----------------------------------------------------------
-        -- Return unique list of furniture names in market (recursive)
+        -- Scan furniture (market boundaries enforced)
         -----------------------------------------------------------
         local function ReturnFurnitureList()
-            local list = {}
-            local seen = {}
+            local list, seen = {}, {}
             local market = GetMarketFolder()
             if not market then return list end
 
             local function scan(folder)
                 for _, child in ipairs(folder:GetChildren()) do
                     if child:IsA("Model") then
-                        local hasPart = child:FindFirstChildWhichIsA("BasePart", true)
-                        if hasPart and not seen[child.Name] then
+                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                        if part and IsInsideMarket(part) and not seen[child.Name] then
                             table.insert(list, child.Name)
                             seen[child.Name] = true
                         end
@@ -218,34 +229,36 @@ MainTab:CreateButton({
         end
 
         -----------------------------------------------------------
-        -- Find target model recursively (market only)
+        -- Find model in market & inside boundaries
         -----------------------------------------------------------
         local function FindModelInMarketByName(name)
             local market = GetMarketFolder()
             if not market then return nil end
             local found = nil
 
-            local function find(folder)
+            local function search(folder)
                 for _, child in ipairs(folder:GetChildren()) do
                     if child:IsA("Model") and child.Name == name then
-                        found = child
-                        return
+                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                        if part and IsInsideMarket(part) then
+                            found = child
+                            return
+                        end
                     elseif child:IsA("Folder") then
-                        find(child)
+                        search(child)
                         if found then return end
                     end
                 end
             end
 
-            find(market)
+            search(market)
             return found
         end
 
         -----------------------------------------------------------
-        -- Pickup furniture
+        -- Pickup furniture (market-bound only)
         -----------------------------------------------------------
         local function PickupFurnitureByName(name)
-            if not name then return false end
             local model = FindModelInMarketByName(name)
             if model then
                 pcall(function() RS.PickupItemEvent:FireServer(model) end)
@@ -255,10 +268,9 @@ MainTab:CreateButton({
         end
 
         -----------------------------------------------------------
-        -- Teleport to furniture
+        -- Teleport to furniture (market-bound only)
         -----------------------------------------------------------
         local function TeleportToFurnitureByName(name)
-            if not name then return end
             local hrp = GetHRP()
             if not hrp then return end
             local model = FindModelInMarketByName(name)
@@ -271,7 +283,7 @@ MainTab:CreateButton({
         end
 
         -----------------------------------------------------------
-        -- GUI components & interactions
+        -- GUI Components
         -----------------------------------------------------------
         local furnOptions = ReturnFurnitureList()
         local furnDropdown = m:Dropdown("Selected Furniture", furnOptions, function(option)
@@ -284,29 +296,23 @@ MainTab:CreateButton({
         end)
 
         m:Button("Bring Selected Furniture", function()
-            if selected then
-                local ok = PickupFurnitureByName(selected)
-                if not ok then warn("Furniture tidak ditemukan atau sudah diambil.") end
-            else
-                warn("Pilih furniture dulu!")
+            if not selected then return warn("Pilih furniture dulu!") end
+            if not PickupFurnitureByName(selected) then
+                warn("Furniture tidak ditemukan atau berada di luar market!")
             end
         end)
 
         m:Button("Teleport to Furniture", function()
-            if selected then
-                TeleportToFurnitureByName(selected)
-            else
-                warn("Pilih furniture dulu!")
-            end
+            if not selected then return warn("Pilih furniture dulu!") end
+            TeleportToFurnitureByName(selected)
         end)
 
         m:Button("Close GUI", function()
-            if m and m.Destroy then
-                pcall(function() m:Destroy() end)
-            end
+            if m and m.Destroy then pcall(function() m:Destroy() end) end
         end)
     end
 })
+
 
 -- Furniture GUI (CLEAN)
 MainTab:CreateButton({
