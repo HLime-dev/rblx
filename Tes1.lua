@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN5",
+   Name = "DN7",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -307,6 +307,158 @@ MainTab:CreateButton({
         end)
     end
 })
+
+-- Furniture GUI (CLEAN)
+MainTab:CreateButton({
+    Name = "Open Bunker Furniture GUI",
+    Callback = function()
+        -- Load library
+        local ok, lib = pcall(function()
+            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
+        end)
+        if not ok or not lib then
+            warn("Gagal load Turtle-Lib")
+            return
+        end
+
+        -- Jalankan GUI furniture BUNKER-mu (kode asli milikmu, tidak diubah)
+        local selectedBunkerFurniture = nil
+
+        local function ReturnBunkerFurnitureList()
+            local list = {}
+            local seen = {}
+            local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+            local bunkerFolder = workspace:FindFirstChild("Bunkers")
+            if not wyposFolder or not bunkerFolder then return list end
+
+            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+            if not bunkerModel then return list end
+            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+            if not bunkerCF then return list end
+
+            local function isInBunker(part)
+                local size = Vector3.new(50,50,50)
+                local minBound = bunkerCF.Position - size/2
+                local maxBound = bunkerCF.Position + size/2
+                local pos = part.Position
+                return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+                       (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+                       (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+            end
+
+            local function scan(folder)
+                for _, child in ipairs(folder:GetChildren()) do
+                    if child:IsA("Model") and child:FindFirstChildWhichIsA("BasePart", true) then
+                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                        if part and isInBunker(part) and not seen[child.Name] then
+                            table.insert(list, child.Name)
+                            seen[child.Name] = true
+                        end
+                    elseif child:IsA("Folder") then
+                        scan(child)
+                    end
+                end
+            end
+
+            scan(wyposFolder)
+            table.sort(list)
+            return list
+        end
+
+        local function FindModelInBunkerByName(name)
+            local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+            local bunkerFolder = workspace:FindFirstChild("Bunkers")
+            if not wyposFolder or not bunkerFolder then return nil end
+
+            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+            if not bunkerModel then return nil end
+            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+            if not bunkerCF then return nil end
+
+            local function isInBunker(part)
+                local size = Vector3.new(50,50,50)
+                local minBound = bunkerCF.Position - size/2
+                local maxBound = bunkerCF.Position + size/2
+                local pos = part.Position
+                return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+                       (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+                       (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+            end
+
+            local found = nil
+            local function scan(folder)
+                for _, child in ipairs(folder:GetChildren()) do
+                    if child:IsA("Model") and child.Name == name then
+                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                        if part and isInBunker(part) then
+                            found = child
+                            return
+                        end
+                    elseif child:IsA("Folder") then
+                        scan(child)
+                        if found then return end
+                    end
+                end
+            end
+
+            scan(wyposFolder)
+            return found
+        end
+
+        local function TeleportToFurniture(name)
+            local hrp = GetHRP()
+            if not hrp then return end
+            local model = FindModelInBunkerByName(name)
+            if model then
+                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
+                end
+            end
+        end
+
+        local ok2, _ = pcall(function()
+            local m = lib:Window("Bunker Furniture GUI")
+
+            local dropdown = m:Dropdown("Select Furniture", ReturnBunkerFurnitureList(), function(option)
+                selectedBunkerFurniture = option
+            end)
+
+            m:Button("Refresh Furniture List", function()
+                local newList = ReturnBunkerFurnitureList()
+                pcall(function() dropdown:UpdateOptions(newList) end)
+            end)
+
+            m:Button("Bring Selected Furniture", function()
+                if selectedBunkerFurniture then
+                    local model = FindModelInBunkerByName(selectedBunkerFurniture)
+                    if model then
+                        pcall(function() RS.PickupItemEvent:FireServer(model) end)
+                    else
+                        warn("Furniture tidak ada di bunker!")
+                    end
+                else
+                    warn("Pilih furniture dulu!")
+                end
+            end)
+
+            m:Button("Teleport to Selected Furniture", function()
+                if selectedBunkerFurniture then
+                    TeleportToFurniture(selectedBunkerFurniture)
+                else
+                    warn("Pilih furniture dulu!")
+                end
+            end)
+
+            m:Button("Close GUI", function()
+                if m and m.Destroy then pcall(function() m:Destroy() end) end
+            end)
+        end)
+
+        if not ok2 then warn("Gagal membuat Furniture GUI") end
+    end
+})
+
 
 -------------------------------------------------------
 --=================== Furnitur Tab ==================--
