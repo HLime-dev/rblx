@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC3",
-   LoadingTitle = "HaeX SC3",
+   Name = "DN SC5",
+   LoadingTitle = "HaeX SC5",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -542,6 +542,125 @@ TeleportTab:CreateButton({
         pcall(function() playerDropdown:UpdateOptions(GetPlayerList()) end)
     end
 })
+
+-------------------------------------------------------
+--==================== BUNKER FURNITURE TAB ==================--
+-------------------------------------------------------
+local BunkerTab = Window:CreateTab("Bunker Furniture", 4483362458)
+
+local selectedBunkerFurniture = nil
+
+-- Scan semua furniture di bunker
+local function ReturnBunkerFurnitureList()
+    local list = {}
+    local seen = {}
+    local bunkers = workspace:FindFirstChild("Bunkers")
+    if not bunkers or not bunkerName or not bunkers:FindFirstChild(bunkerName) then return list end
+    local bunkerFolder = bunkers[bunkerName]
+
+    local function scan(folder)
+        for _, child in ipairs(folder:GetChildren()) do
+            if child:IsA("Model") then
+                local hasPart = child:FindFirstChildWhichIsA("BasePart", true)
+                if hasPart and not seen[child.Name] then
+                    table.insert(list, child.Name)
+                    seen[child.Name] = true
+                end
+            elseif child:IsA("Folder") then
+                scan(child)
+            end
+        end
+    end
+
+    scan(bunkerFolder)
+    table.sort(list)
+    return list
+end
+
+-- Cari model di bunker by name
+local function FindModelInBunkerByName(name)
+    local bunkers = workspace:FindFirstChild("Bunkers")
+    if not bunkers or not bunkerName or not bunkers:FindFirstChild(bunkerName) then return nil end
+    local bunkerFolder = bunkers[bunkerName]
+    local found = nil
+
+    local function find(folder)
+        for _, child in ipairs(folder:GetChildren()) do
+            if child:IsA("Model") and child.Name == name then
+                found = child
+                return
+            elseif child:IsA("Folder") then
+                find(child)
+                if found then return end
+            end
+        end
+    end
+
+    find(bunkerFolder)
+    return found
+end
+
+-- Pickup furniture di bunker
+local function PickupBunkerFurniture(name)
+    local model = FindModelInBunkerByName(name)
+    if model then
+        pcall(function() RS.PickupItemEvent:FireServer(model) end)
+        return true
+    end
+    return false
+end
+
+-- Teleport ke furniture di bunker
+local function TeleportToBunkerFurniture(name)
+    local hrp = GetHRP()
+    if not hrp then return end
+    local model = FindModelInBunkerByName(name)
+    if model then
+        local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
+        end
+    end
+end
+
+-- GUI components
+local ok, lib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
+end)
+if not ok or not lib then warn("Gagal load Turtle-Lib") return end
+
+local m = lib:Window("Bunker Furniture GUI")
+
+local bunkerDropdown = m:Dropdown("Selected Furniture", ReturnBunkerFurnitureList(), function(option)
+    selectedBunkerFurniture = option
+end)
+
+m:Button("Refresh Furniture List", function()
+    local newList = ReturnBunkerFurnitureList()
+    pcall(function() bunkerDropdown:UpdateOptions(newList) end)
+end)
+
+m:Button("Bring Selected Furniture", function()
+    if selectedBunkerFurniture then
+        local ok = PickupBunkerFurniture(selectedBunkerFurniture)
+        if not ok then warn("Furniture tidak ditemukan atau sudah diambil.") end
+    else
+        warn("Pilih furniture dulu!")
+    end
+end)
+
+m:Button("Teleport to Selected Furniture", function()
+    if selectedBunkerFurniture then
+        TeleportToBunkerFurniture(selectedBunkerFurniture)
+    else
+        warn("Pilih furniture dulu!")
+    end
+end)
+
+m:Button("Close GUI", function()
+    if m and m.Destroy then pcall(function() m:Destroy() end) end
+end)
+
 
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
