@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN2",
+   Name = "DN3",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -133,167 +133,65 @@ MainTab:CreateButton({
 })
 
 -------------------------------------------------------
---==================== TELEPORT FURNITURE WITH RETURN 5 DETIK ==================--
--------------------------------------------------------
--------------------------------------------------------
--- Market Furniture GUI + Physical Boundaries
+--==================== FURNITURE GUI (HIDE/SHOW) IN MAIN TAB =================--
 -------------------------------------------------------
 
--- Atur area Market (center + size boundaries)
-local marketCenter = Vector3.new(143, 5, -118) -- ganti jika center marketmu berbeda
-local marketSize   = Vector3.new(80, 40, 80)  -- ganti ukuran area Market
+local furnitureGUIVisible = false
+local furnitureSection = nil
 
--- Fungsi boundary check
-local function isInMarket(part)
-    local minBound = marketCenter - marketSize/2
-    local maxBound = marketCenter + marketSize/2
-    local pos = part.Position
-    return (pos.X >= minBound.X and pos.X <= maxBound.X) and
-           (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
-           (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
-end
-
--- Cari folder furniture Market, tapi boundaries pakai fisik bukan folder
-local function GetMarketFolder()
-    -- tidak terpaku nama folder, hanya untuk scanning model
-    for _, v in ipairs(workspace:GetChildren()) do
-        if v:IsA("Folder") then
-            return v
-        end
-    end
-    return nil
-end
-
--- Scan furniture hanya yang ada secara fisik di dalam Market
-local function ReturnMarketFurnitureList()
-    local list  = {}
-    local seen  = {}
-    local folder = GetMarketFolder()
-    if not folder then return list end
-
-    local function scan(container)
-        for _, obj in ipairs(container:GetChildren()) do
-            if obj:IsA("Model") then
-                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                if part and isInMarket(part) and not seen[obj.Name] then
-                    table.insert(list, obj.Name)
-                    seen[obj.Name] = true
-                end
-            elseif obj:IsA("Folder") then
-                scan(obj)
-            end
-        end
-    end
-
-    scan(folder)
-    table.sort(list)
-    return list
-end
-
--- Cari model furniture di map by name, pastikan dia di Market
-local function FindModelInMarketByName(name)
-    local folder = GetMarketFolder()
-    if not folder then return nil end
-    local found = nil
-
-    local function scan(container)
-        for _, obj in ipairs(container:GetChildren()) do
-            if obj:IsA("Model") and obj.Name == name then
-                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                if part and isInMarket(part) then
-                    found = obj
-                    return
-                end
-            elseif obj:IsA("Folder") then
-                scan(obj)
-                if found then return end
-            end
-        end
-    end
-
-    scan(folder)
-    return found
-end
-
--- Pickup / Bring ke player
-local function PickupMarketFurniture(name)
-    local model = FindModelInMarketByName(name)
-    if model then
-        pcall(function()
-            RS.PickupItemEvent:FireServer(model)
-        end)
-        return true
-    end
-    return false
-end
-
--- Teleport ke model
-local function TPMarketFurniture(name)
-    local model = FindModelInMarketByName(name)
-    local hrp = GetHRP()
-    if not hrp then warn("HRP tidak ditemukan!") return end
-
-    if model then
-        local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-        if part then
-            local start = hrp.CFrame
-            hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
-            task.wait(5)
-            pcall(function() hrp.CFrame = start end)
-        end
-    else
-        warn("Furniture tidak berada di Market!")
-    end
-end
-
--- Tombol untuk buka GUI Market
 MainTab:CreateButton({
-    Name = "Open Market Furniture GUI",
+    Name = "Toggle Furniture GUI",
     Callback = function()
-        local ok, lib = pcall(function()
-            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
-        end)
-        if not ok or not lib then warn("Gagal load Turtle-Lib") return end
+        furnitureGUIVisible = not furnitureGUIVisible
 
-        -- Cegah buka GUI ganda
-        if getgenv().marketGUI and getgenv().marketGUI.Parent then
-            warn("Market GUI sudah terbuka!")
-            return
+        -- Jika baru pertama kali dibuat, generate UI nya
+        if furnitureGUIVisible and not furnitureSection then
+            furnitureSection = MainTab:CreateSection("Market Furniture")
+
+            MainTab:CreateDropdown({
+                Name = "Selected Furniture",
+                Options = ReturnMarketFurnitureList(),
+                Callback = function(option)
+                    selected = option
+                end
+            })
+
+            MainTab:CreateButton({
+                Name = "Bring / Pickup Selected",
+                Callback = function()
+                    if selected then
+                        PickupMarketFurniture(selected)
+                    else
+                        warn("Pilih furniture dulu!")
+                    end
+                end
+            })
         end
 
-        -- Buat Window GUI
-        local gui = lib:Window("Market Furniture GUI")
-        getgenv().marketGUI = gui
-
-        local selected = nil
-        local dropdown = gui:Dropdown("Select Furniture", ReturnMarketFurnitureList(), function(opt)
-            selected = opt
-        end)
-
-        gui:Button("Refresh List", function()
-            local newList = ReturnMarketFurnitureList()
-            pcall(function() dropdown:UpdateOptions(newList) end)
-        end)
-
-        gui:Button("Bring / Pickup", function()
-            if not selected then warn("Pilih furniture dulu!") return end
-            local ok = PickupMarketFurniture(selected)
-            if not ok then warn("Gagal: Furniture tidak di Market!") end
-        end)
-
-        gui:Button("Teleport 5s + Return", function()
-            if not selected then warn("Pilih furniture dulu!") return end
-            TPMarketFurniture(selected)
-        end)
-
-        gui:Button("Close GUI", function()
-            if getgenv().marketGUI then
-                pcall(function() getgenv().marketGUI:Destroy() end)
-                getgenv().marketGUI = nil
+        -- Hide / Show UI component
+        if furnitureSection then
+            for _, obj in ipairs(MainTab.Elements) do
+                if obj.Type == "Section" and obj.Name == furnitureSection.Name then
+                    obj.Instance.Visible = furnitureGUIVisible
+                elseif obj.Name == "Selected Furniture" or obj.Name == "Bring / Pickup Selected" then
+                    if obj.Instance then
+                        obj.Instance.Visible = furnitureGUIVisible
+                    end
+                end
             end
-        end)
+        end
     end
 })
+
+-- Tombol refresh list furniture (tidak ikut disembunyikan)
+MainTab:CreateButton({
+    Name = "Refresh Furniture List",
+    Callback = function()
+        local newList = ReturnMarketFurnitureList()
+        Window:Notify({Title="Furniture", Content="List refreshed ("..#newList.." items)"})
+    end
+})
+
 
 
 -------------------------------------------------------
