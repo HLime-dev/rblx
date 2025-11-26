@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC5",
-   LoadingTitle = "HaeX SC5",
+   Name = "DN SC6",
+   LoadingTitle = "HaeX SC6",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -546,12 +546,15 @@ TeleportTab:CreateButton({
 -------------------------------------------------------
 --==================== BUNKER FURNITURE TAB ==================--
 -------------------------------------------------------
+-------------------------------------------------------
+--==================== BUNKER FURNITURE GUI ==================--
+-------------------------------------------------------
 local BunkerTab = Window:CreateTab("Bunker Furniture", 4483362458)
 
 local selectedBunkerFurniture = nil
 
--- Scan semua furniture di bunker
-local function ReturnBunkerFurnitureList()
+-- Scan furniture bunker yang bisa diambil
+local function ReturnPickupableBunkerFurniture()
     local list = {}
     local seen = {}
     local bunkers = workspace:FindFirstChild("Bunkers")
@@ -560,9 +563,10 @@ local function ReturnBunkerFurnitureList()
 
     local function scan(folder)
         for _, child in ipairs(folder:GetChildren()) do
-            if child:IsA("Model") then
-                local hasPart = child:FindFirstChildWhichIsA("BasePart", true)
-                if hasPart and not seen[child.Name] then
+            if child:IsA("Model") and child:FindFirstChildWhichIsA("BasePart", true) then
+                -- Cek apakah bisa di-pickup (Market furniture)
+                local ok = pcall(function() RS.PickupItemEvent:FireServer(child) end)
+                if ok and not seen[child.Name] then
                     table.insert(list, child.Name)
                     seen[child.Name] = true
                 end
@@ -600,16 +604,6 @@ local function FindModelInBunkerByName(name)
     return found
 end
 
--- Pickup furniture di bunker
-local function PickupBunkerFurniture(name)
-    local model = FindModelInBunkerByName(name)
-    if model then
-        pcall(function() RS.PickupItemEvent:FireServer(model) end)
-        return true
-    end
-    return false
-end
-
 -- Teleport ke furniture di bunker
 local function TeleportToBunkerFurniture(name)
     local hrp = GetHRP()
@@ -631,24 +625,30 @@ if not ok or not lib then warn("Gagal load Turtle-Lib") return end
 
 local m = lib:Window("Bunker Furniture GUI")
 
-local bunkerDropdown = m:Dropdown("Selected Furniture", ReturnBunkerFurnitureList(), function(option)
+-- Dropdown furniture
+local bunkerDropdown = m:Dropdown("Select Furniture", ReturnPickupableBunkerFurniture(), function(option)
     selectedBunkerFurniture = option
 end)
 
+-- Tombol Refresh
 m:Button("Refresh Furniture List", function()
-    local newList = ReturnBunkerFurnitureList()
+    local newList = ReturnPickupableBunkerFurniture()
     pcall(function() bunkerDropdown:UpdateOptions(newList) end)
 end)
 
+-- Tombol Bring / Pickup
 m:Button("Bring Selected Furniture", function()
     if selectedBunkerFurniture then
-        local ok = PickupBunkerFurniture(selectedBunkerFurniture)
-        if not ok then warn("Furniture tidak ditemukan atau sudah diambil.") end
+        local model = FindModelInBunkerByName(selectedBunkerFurniture)
+        if model then
+            pcall(function() RS.PickupItemEvent:FireServer(model) end)
+        end
     else
         warn("Pilih furniture dulu!")
     end
 end)
 
+-- Tombol Teleport
 m:Button("Teleport to Selected Furniture", function()
     if selectedBunkerFurniture then
         TeleportToBunkerFurniture(selectedBunkerFurniture)
@@ -657,6 +657,7 @@ m:Button("Teleport to Selected Furniture", function()
     end
 end)
 
+-- Tombol Close GUI
 m:Button("Close GUI", function()
     if m and m.Destroy then pcall(function() m:Destroy() end) end
 end)
