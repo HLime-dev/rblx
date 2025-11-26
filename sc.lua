@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC7",
-   LoadingTitle = "HaeX SC7",
+   Name = "DN SC9",
+   LoadingTitle = "HaeX SC9",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -547,7 +547,7 @@ TeleportTab:CreateButton({
 --==================== BUNKER FURNITURE TAB ==================--
 -------------------------------------------------------
 -------------------------------------------------------
---==================== BUNKER MARKET FURNITURE GUI ==================--
+--==================== BUNKER FURNITURE GUI ==================--
 -------------------------------------------------------
 local BunkerTab = Window:CreateTab("Bunker Furniture", 4483362458)
 
@@ -557,18 +557,17 @@ local selectedBunkerFurniture = nil
 local function ReturnBunkerFurnitureList()
     local list = {}
     local seen = {}
-    local bunkerFolder = workspace:FindFirstChild("Bunkers")
     local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+    local bunkerFolder = workspace:FindFirstChild("Bunkers")
     if not wyposFolder or not bunkerFolder then return list end
 
-    -- Asumsi bunker memiliki PrimaryPart atau SpawnLocation untuk bounding box
     local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
     if not bunkerModel then return list end
     local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
     if not bunkerCF then return list end
 
     local function isInBunker(part)
-        local size = Vector3.new(50,50,50) -- perkiraan volume bunker, sesuaikan
+        local size = Vector3.new(50,50,50) -- sesuaikan ukuran bunker
         local minBound = bunkerCF.Position - size/2
         local maxBound = bunkerCF.Position + size/2
         local pos = part.Position
@@ -596,25 +595,44 @@ local function ReturnBunkerFurnitureList()
     return list
 end
 
--- Cari model di Wyposazenie by name
-local function FindModelByName(name)
+-- Cari model di Wyposazenie by name, tapi hanya yang ada di bunker
+local function FindModelInBunkerByName(name)
     local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-    if not wyposFolder then return nil end
-    local found = nil
+    local bunkerFolder = workspace:FindFirstChild("Bunkers")
+    if not wyposFolder or not bunkerFolder then return nil end
 
-    local function find(folder)
+    local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    if not bunkerModel then return nil end
+    local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+    if not bunkerCF then return nil end
+
+    local function isInBunker(part)
+        local size = Vector3.new(50,50,50)
+        local minBound = bunkerCF.Position - size/2
+        local maxBound = bunkerCF.Position + size/2
+        local pos = part.Position
+        return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+               (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+               (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+    end
+
+    local found = nil
+    local function scan(folder)
         for _, child in ipairs(folder:GetChildren()) do
             if child:IsA("Model") and child.Name == name then
-                found = child
-                return
+                local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                if part and isInBunker(part) then
+                    found = child
+                    return
+                end
             elseif child:IsA("Folder") then
-                find(child)
+                scan(child)
                 if found then return end
             end
         end
     end
 
-    find(wyposFolder)
+    scan(wyposFolder)
     return found
 end
 
@@ -622,7 +640,7 @@ end
 local function TeleportToFurniture(name)
     local hrp = GetHRP()
     if not hrp then return end
-    local model = FindModelByName(name)
+    local model = FindModelInBunkerByName(name)
     if model then
         local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
         if part then
@@ -631,7 +649,7 @@ local function TeleportToFurniture(name)
     end
 end
 
--- GUI components
+-- Load GUI
 local ok, lib = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
 end)
@@ -653,9 +671,11 @@ end)
 -- Tombol Bring / Pickup
 m:Button("Bring Selected Furniture", function()
     if selectedBunkerFurniture then
-        local model = FindModelByName(selectedBunkerFurniture)
+        local model = FindModelInBunkerByName(selectedBunkerFurniture)
         if model then
             pcall(function() RS.PickupItemEvent:FireServer(model) end)
+        else
+            warn("Furniture tidak ada di bunker!")
         end
     else
         warn("Pilih furniture dulu!")
