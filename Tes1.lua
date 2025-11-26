@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN7",
+   Name = "DN10",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -134,7 +134,7 @@ MainTab:CreateButton({
 
 -- Furniture GUI (CLEAN)
 MainTab:CreateButton({
-    Name = "Open Furniture GUI",
+    Name = "Open Market Furniture GUI",
     Callback = function()
         local ok, lib = pcall(function()
             return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
@@ -463,7 +463,7 @@ MainTab:CreateButton({
 -------------------------------------------------------
 --=================== Furnitur Tab ==================--
 --------------------------------------------------------
-local FurniturTab = Window:CreateTab("Furnitur", 4483362458)
+---local FurniturTab = Window:CreateTab("Furnitur", 4483362458)----
 
 local selectedBunkerFurniture = nil
 
