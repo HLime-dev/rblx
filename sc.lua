@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 --// Window
 local Window = Rayfield:CreateWindow({
-   Name = "DN SC1",
-   LoadingTitle = "HaeX SC1",
+   Name = "DN SC11",
+   LoadingTitle = "HaeX SC11",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
@@ -469,6 +469,227 @@ MainTab:CreateButton({
         Rayfield:Destroy()
     end
 })
+
+-------------------------------------------------------
+--==================== BUNKER + MARKET FURNITURE GUI ==================--
+-------------------------------------------------------
+local selectedBunkerFurniture = nil
+local selectedMarketFurniture = nil
+local furnitureGUIWindow = nil  -- simpan instance GUI
+
+--==================== Helper Functions ====================--
+local function GetHRP()
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Cek apakah part berada di bounding box bunker
+local function isInBunker(part)
+    local bunkerFolder = workspace:FindFirstChild("Bunkers")
+    if not bunkerFolder then return false end
+    local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    if not bunkerModel then return false end
+    local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+    if not bunkerCF then return false end
+    local size = Vector3.new(50,50,50)
+    local minBound = bunkerCF.Position - size/2
+    local maxBound = bunkerCF.Position + size/2
+    local pos = part.Position
+    return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+           (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+           (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+end
+
+--==================== Furniture Lists ====================--
+-- Semua furniture di Wyposazenie
+local function ReturnAllMarketFurniture()
+    local list, seen = {}, {}
+    local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+    if not folder then return list end
+
+    local function scan(f)
+        for _, c in ipairs(f:GetChildren()) do
+            if c:IsA("Model") and c:FindFirstChildWhichIsA("BasePart", true) then
+                if not seen[c.Name] then
+                    table.insert(list, c.Name)
+                    seen[c.Name] = true
+                end
+            elseif c:IsA("Folder") then
+                scan(c)
+            end
+        end
+    end
+    scan(folder)
+    table.sort(list)
+    return list
+end
+
+-- Furniture yang posisinya ada di bunker
+local function ReturnBunkerFurnitureList()
+    local list, seen = {}, {}
+    local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+    if not folder then return list end
+
+    local function scan(f)
+        for _, c in ipairs(f:GetChildren()) do
+            if c:IsA("Model") and c:FindFirstChildWhichIsA("BasePart", true) then
+                local part = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart", true)
+                if part and isInBunker(part) and not seen[c.Name] then
+                    table.insert(list, c.Name)
+                    seen[c.Name] = true
+                end
+            elseif c:IsA("Folder") then
+                scan(c)
+            end
+        end
+    end
+    scan(folder)
+    table.sort(list)
+    return list
+end
+
+-- Cari model di Wyposazenie by name, bisa untuk bunker atau market
+local function FindModelByName(name, onlyInBunker)
+    local folder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+    if not folder then return nil end
+
+    local found = nil
+    local function scan(f)
+        for _, c in ipairs(f:GetChildren()) do
+            if c:IsA("Model") and c.Name == name then
+                local part = c.PrimaryPart or c:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    if onlyInBunker then
+                        if isInBunker(part) then
+                            found = c
+                            return
+                        end
+                    else
+                        found = c
+                        return
+                    end
+                end
+            elseif c:IsA("Folder") then
+                scan(c)
+                if found then return end
+            end
+        end
+    end
+    scan(folder)
+    return found
+end
+
+--==================== Teleport / Pickup ====================--
+local function TeleportToFurniture(model)
+    local hrp = GetHRP()
+    if not hrp or not model then return end
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if part then
+        hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
+    end
+end
+
+local function PickupFurniture(model)
+    if model then
+        pcall(function() RS.PickupItemEvent:FireServer(model) end)
+    end
+end
+
+--==================== GUI Creation ====================--
+local function CreateFurnitureGUI()
+    if furnitureGUIWindow and furnitureGUIWindow.Destroy then
+        furnitureGUIWindow:Destroy()
+        furnitureGUIWindow = nil
+    end
+
+    local ok, lib = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
+    end)
+    if not ok or not lib then warn("Gagal load Turtle-Lib") return end
+
+    furnitureGUIWindow = lib:Window("Furniture GUI (Bunker + Market)")
+
+    -- Dropdown Bunker
+    local bunkerDropdown = furnitureGUIWindow:Dropdown("Bunker Furniture", ReturnBunkerFurnitureList(), function(option)
+        selectedBunkerFurniture = option
+    end)
+
+    -- Dropdown Market
+    local marketDropdown = furnitureGUIWindow:Dropdown("Market Furniture", ReturnAllMarketFurniture(), function(option)
+        selectedMarketFurniture = option
+    end)
+
+    -- Tombol Refresh
+    furnitureGUIWindow:Button("Refresh Furniture Lists", function()
+        pcall(function()
+            bunkerDropdown:UpdateOptions(ReturnBunkerFurnitureList())
+            marketDropdown:UpdateOptions(ReturnAllMarketFurniture())
+        end)
+    end)
+
+    -- Tombol Bring Bunker
+    furnitureGUIWindow:Button("Bring Selected Bunker Furniture", function()
+        if selectedBunkerFurniture then
+            local model = FindModelByName(selectedBunkerFurniture, true)
+            if model then
+                PickupFurniture(model)
+            else
+                warn("Furniture tidak ada di bunker!")
+            end
+        else
+            warn("Pilih furniture bunker dulu!")
+        end
+    end)
+
+    -- Tombol Teleport Bunker
+    furnitureGUIWindow:Button("Teleport to Selected Bunker Furniture", function()
+        if selectedBunkerFurniture then
+            local model = FindModelByName(selectedBunkerFurniture, true)
+            TeleportToFurniture(model)
+        else
+            warn("Pilih furniture bunker dulu!")
+        end
+    end)
+
+    -- Tombol Bring Market
+    furnitureGUIWindow:Button("Bring Selected Market Furniture", function()
+        if selectedMarketFurniture then
+            local model = FindModelByName(selectedMarketFurniture, false)
+            if model then
+                PickupFurniture(model)
+            else
+                warn("Furniture market tidak ditemukan!")
+            end
+        else
+            warn("Pilih furniture market dulu!")
+        end
+    end)
+
+    -- Tombol Teleport Market
+    furnitureGUIWindow:Button("Teleport to Selected Market Furniture", function()
+        if selectedMarketFurniture then
+            local model = FindModelByName(selectedMarketFurniture, false)
+            TeleportToFurniture(model)
+        else
+            warn("Pilih furniture market dulu!")
+        end
+    end)
+
+    -- Tombol Close
+    furnitureGUIWindow:Button("Close GUI", function()
+        if furnitureGUIWindow and furnitureGUIWindow.Destroy then pcall(function() furnitureGUIWindow:Destroy() end) end
+        furnitureGUIWindow = nil
+    end)
+end
+
+-- Tombol di MainTab untuk membuka GUI
+MainTab:CreateButton({
+    Name = "Open Furniture GUI (Bunker + Market)",
+    Callback = function()
+        CreateFurnitureGUI()
+    end
+})
+
 
 -------------------------------------------------------
 --==================== TELEPORT TAB ==================--
