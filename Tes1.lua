@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN5",
+   Name = "DN7",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -89,6 +89,7 @@ MainTab:CreateToggle({
     end
 })
 
+local FoodSection = MainTab:CreateSection("Food")
 -- Collect All Food
 MainTab:CreateButton({
     Name = "Collect All Food",
@@ -152,7 +153,7 @@ MainTab:CreateButton({
 })
 
 
-
+local FurnitureSection = MainTab:CreateSection("Furniture")
 ----market furn------
 
 MainTab:CreateButton({
