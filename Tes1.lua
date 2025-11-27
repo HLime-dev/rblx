@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 5",
+   Name = "DN bug fixed 6",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -196,58 +196,56 @@ MainTab:CreateButton({
 -----------------------------------------------------------------
 -- BUNKER BOUNDARY FOOD COLLECT (fixed kedeteksian & scan folder)
 -----------------------------------------------------------------
-
-local function getMyBunkerPart()
-    local bunkers = Workspace:FindFirstChild("Bunkers")
-    if not bunkers then return nil end
-
-    local my = bunkers:FindFirstChild(bunkerName)
-    return my and (my.PrimaryPart or my:FindFirstChildWhichIsA("BasePart"))
-end
-
-local function isPartInMyBunker(part)
-    local bunkerPart = getMyBunkerPart()
-    if not bunkerPart or not part then return false end
-    if not part:IsA("BasePart") then return false end
-
-    local half = bunkerPart.Size / 2
-    local localPos = bunkerPart.CFrame:PointToObjectSpace(part.Position)
-
-    return (
-        math.abs(localPos.X) <= half.X and
-        math.abs(localPos.Y) <= half.Y and
-        math.abs(localPos.Z) <= half.Z
-    )
-end
-
-
+--=== Collect All Food di Bunker Sendiri ===--
 MainTab:CreateButton({
     Name = "Collect All Food in Bunker",
     Callback = function()
         local hrp = GetHRP()
         if not hrp then return end
+        local plrBunkerName = plr:GetAttribute("AssignedBunkerName")
+        local bunkerFolder = workspace:FindFirstChild("Bunkers")
+        if not bunkerFolder then return end
 
-        if not getMyBunkerPart() then
-            return Rayfield:Notify({Title="Food", Content="Bunker tidak ditemukan!", Duration=2})
-        end
+        local bunkerModel = bunkerFolder:FindFirstChild(plrBunkerName)
+        if not bunkerModel then return end
 
-        local lastPos = hrp.CFrame
+        local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+        if not bunkerCF then return end
 
+        -- bounding box bunker
+        local size = Vector3.new(50,50,50)
+        local minBound = bunkerCF.Position - size/2
+        local maxBound = bunkerCF.Position + size/2
+
+        -- simpan posisi awal
+        local originalCFrame = hrp.CFrame
+
+        -- scan semua Tool di Workspace
         for _, tool in ipairs(Workspace:GetDescendants()) do
-            if tool:IsA("Tool") and tool.Name:match("Food") then
+            if tool:IsA("Tool") then
                 local handle = tool:FindFirstChild("Handle")
                 local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
 
-                if handle and prompt and isPartInMyBunker(handle) then
-                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
-                    task.wait(0.1)
-                    pcall(function() fireproximityprompt(prompt) end)
+                if handle and prompt then
+                    local pos = handle.Position
+                    -- hanya ambil yang ada di bunker sendiri
+                    if pos.X >= minBound.X and pos.X <= maxBound.X and
+                       pos.Y >= minBound.Y and pos.Y <= maxBound.Y and
+                       pos.Z >= minBound.Z and pos.Z <= maxBound.Z then
+
+                        -- teleport sebentar ke item
+                        hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                        task.wait(0.15)
+                        pcall(function() fireproximityprompt(prompt) end)
+                        task.wait(0.05)
+                    end
                 end
             end
         end
 
-        pcall(function() hrp.CFrame = lastPos end)
-        Rayfield:Notify({Title="Food", Content="Collect selesai!", Duration=2})
+        -- kembalikan ke posisi awal
+        task.wait(0.1)
+        pcall(function() hrp.CFrame = originalCFrame end)
     end
 })
 
