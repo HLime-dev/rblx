@@ -112,7 +112,7 @@ MainTab:CreateButton({
     end
 })
 
--- Drop All Food (USE BUILT-IN DROP METHOD IF EXISTS)
+-- ✅ FIXED: Drop satu-satu tool ke depan player, no kill, no parent change
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
@@ -121,57 +121,32 @@ MainTab:CreateButton({
         local hum = GetHum()
         if not char or not hrp or not hum then return end
 
-        local function triggerBuiltInDrop(tool)
-            -- Cari Button/Module/Remote/Function bernama "Drop" / "drop" / "Buang" / "Throw"
-            if tool:FindFirstChild("Drop") then
-                pcall(function() tool.Drop:Activate() end)
-                return true
-            end
-            for _, v in ipairs(tool:GetChildren()) do
-                if typeof(v) == "function" or typeof(v) == "table" then
-                    if v.Name and v.Name:lower() == "drop" then
-                        pcall(function() v:Activate() end)
-                        return true
-                    end
-                end
-            end
-            return false
-        end
-
         for _, tool in ipairs(plr.Backpack:GetChildren()) do
             if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
-                -- Equip dulu
+                -- Equip 1 tool
                 hum:EquipTool(tool)
-                task.wait(0.18)
+                task.wait(0.15)
 
-                local dropped = triggerBuiltInDrop(tool)
+                -- Unequip semua biar grip lepas di server
+                hum:UnequipTools()
+                task.wait(0.05)
 
-                if not dropped then
-                    -- Fallback manual drop kalau tool tidak punya aksi drop bawaan
-                    pcall(function()
-                        tool.Parent = workspace
-                        tool.Handle.Anchored = false
-                        tool.Handle.AssemblyLinearVelocity = Vector3.new(0,2,0) -- dorong physics dikit
-                        tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
-                    end)
-                else
-                    -- Kalau berhasil drop bawaan, pastikan grip dilepas & kena physics
-                    task.wait()
-                    pcall(function()
-                        tool.Parent = workspace
-                        tool.Handle.Anchored = false
-                        tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
-                    end)
-                end
+                -- Pastikan handle tidak lagi nempel di tangan → taruh di depan player
+                pcall(function()
+                    local handle = tool.Handle
+                    handle.Anchored = false
+                    handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -4) -- jatuhkan ke depan player
+                    handle.AssemblyLinearVelocity = Vector3.new(0, 6, 0) -- sentakan fisika biar dianggap dropped
+                end)
 
-                task.wait(0.25) -- jeda antar item biar tidak ke-equip semua
+                task.wait(0.25) -- delay per drop agar tidak tergenggam semua
             end
         end
 
-        -- Pastikan tidak ada tool yang masih nempel di tangan
-        char.Humanoid:UnequipTools()
+        hum:UnequipTools() -- Sapu bersih equip state
     end
 })
+
 
 
 ----market furn------
