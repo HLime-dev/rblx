@@ -1,134 +1,101 @@
---// ================= REMOTE SPY GUI (On-Screen TextBox) ================= //
-
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local plr = Players.LocalPlayer
 
--- Create Screen GUI
-local gui = Instance.new("ScreenGui")
-gui.ResetOnSpawn = false
-gui.Parent = plr:WaitForChild("PlayerGui")
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = plr:WaitForChild("PlayerGui")
 
--- Frame Container
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 600, 0, 320)
-frame.Position = UDim2.new(0.5, -300, 0.1, 0)
-frame.BackgroundTransparency = 0.25
-frame.BackgroundColor3 = Color3.new(0,0,0)
-frame.BorderSizePixel = 2
-frame.Parent = gui
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 550, 0, 300)
+Frame.Position = UDim2.new(0.5, -275, 0.15, 0)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.BackgroundTransparency = 0.3
+Frame.Parent = ScreenGui
 
--- Title Label
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,0,24)
-title.BackgroundTransparency = 0.3
-title.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-title.Text = "RemoteSpy (On Screen)"
-title.TextColor3 = Color3.new(1,1,1)
-title.TextScaled = true
-title.Parent = frame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 22)
+Title.BackgroundTransparency = 0.2
+Title.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+Title.Text = "RemoteSpy"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.Code
+Title.TextScaled = true
+Title.Parent = Frame
 
--- Output TextBox
-local box = Instance.new("TextBox")
-box.Size = UDim2.new(1, -10, 1, -34)
-box.Position = UDim2.new(0,5,0,29)
-box.MultiLine = true
-box.ClearTextOnFocus = false
-box.TextXAlignment = Enum.TextXAlignment.Left
-box.TextYAlignment = Enum.TextYAlignment.Top
-box.TextSize = 14
-box.BackgroundTransparency = 0.2
-box.BackgroundColor3 = Color3.new(0.05,0.05,0.05)
-box.TextColor3 = Color3.new(0,1,0)
-box.Font = Enum.Font.Code
-box.Text = ""
-box.Parent = frame
+local Output = Instance.new("TextBox")
+Output.Size = UDim2.new(1, -10, 1, -54)
+Output.Position = UDim2.new(0, 5, 0, 27)
+Output.MultiLine = true
+Output.ClearTextOnFocus = false
+Output.TextXAlignment = Enum.TextXAlignment.Left
+Output.TextYAlignment = Enum.TextYAlignment.Top
+Output.BackgroundColor3 = Color3.new(0.05, 0.05, 0.05)
+Output.BackgroundTransparency = 0.1
+Output.TextColor3 = Color3.new(0, 1, 0)
+Output.Font = Enum.Font.Code
+Output.TextSize = 14
+Output.Text = "✅ Listener aktif...\n"
+Output.Parent = Frame
 
--- Make box scrollable
-local padding = Instance.new("UIPadding")
-padding.PaddingTop = UDim.new(0, 4)
-padding.PaddingLeft = UDim.new(0, 4)
-padding.Parent = box
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-listLayout.Parent = box
-
--- Log function to write on screen
-local function write(text)
-    box.Text ..= text .. "\n"
+local function log(text)
+    Output.Text = Output.Text .. text .. "\n"
 end
 
--- Hook Remote Calls
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.new(0, 100, 0, 22)
+Close.Position = UDim2.new(0, 5, 1, -27)
+Close.BackgroundColor3 = Color3.new(0.2, 0, 0)
+Close.Text = "Close"
+Close.TextColor3 = Color3.new(1, 1, 1)
+Close.Font = Enum.Font.Code
+Close.TextScaled = true
+Close.Parent = Frame
 
-local oldNamecall = mt.__namecall
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = { ... }
-
-    if self:IsA("RemoteEvent") and method == "FireServer" then
-        write("🔥 RemoteEvent:FireServer")
-        write("• Name   : " .. self.Name)
-        write("• Parent : " .. (self.Parent and self.Parent.Name or "nil"))
-        write("• Args   : " .. table.concat(args, ", "))
-        write("--------------------------------------------------")
-    end
-
-    if self:IsA("RemoteFunction") and method == "InvokeServer" then
-        write("⚡ RemoteFunction:InvokeServer")
-        write("• Name   : " .. self.Name)
-        write("• Parent : " .. (self.Parent and self.Parent.Name or "nil"))
-        write("• Args   : " .. table.concat(args, ", "))
-        write("--------------------------------------------------")
-    end
-
-    return oldNamecall(self, ...)
+Close.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
 end)
 
-setreadonly(mt, true)
+-- Draggable (safe)
+local dragging, dragInput, dragStart, startPos
 
--- Close Button
-local close = Instance.new("TextButton")
-close.Size = UDim2.new(0,120,0,22)
-close.Position = UDim2.new(0,5,1,-27)
-close.BackgroundTransparency = 0.2
-close.BackgroundColor3 = Color3.new(0.2,0,0)
-close.Text = "Close"
-close.TextColor3 = Color3.new(1,1,1)
-close.Font = Enum.Font.Code
-close.TextScaled = true
-close.Parent = frame
-
-close.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
-
--- Draggable
-local dragToggle, dragInput, dragStart, startPos
-local UIS = game:GetService("UserInputService")
-
-frame.InputBegan:Connect(function(input)
+Frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragToggle = true
+        dragging = true
         dragStart = input.Position
-        startPos = frame.Position
+        startPos = Frame.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
 
-frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragToggle then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
     end
 end)
 
-write("✅ RemoteSpy Active — Interact with game buttons to capture events...")
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Remote Listener (tanpa hook global)
+for _, remote in ipairs(game:GetDescendants()) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            log("📡 RemoteEvent Triggered: " .. remote.Name)
+            log("• Args: " .. table.concat({...}, ", "))
+            log("• Parent: " .. tostring(remote.Parent))
+            log("---------------------------")
+        end)
+    elseif remote:IsA("RemoteFunction") then
+        log("⚙ RemoteFunction ditemukan: " .. remote.Name)
+    end
+end
+
+log("✅ Interact tombol Drop/Eat di game sekarang...")
