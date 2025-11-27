@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN1",
+   Name = "DN9",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -152,7 +152,75 @@ MainTab:CreateButton({
     end
 })
 
+------bunker food------------
+local function getMyBunkerPart()
+    local hrp = GetHRP()
+    if not hrp then return nil end
+    local bunkersFolder = workspace:FindFirstChild("Bunkers")
+    if not bunkersFolder then return nil end
 
+    local myBunker = bunkersFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    if not myBunker then return nil end
+
+    return myBunker.PrimaryPart or myBunker:FindFirstChildWhichIsA("BasePart")
+end
+
+local function isPartInMyBunker(part)
+    local bunkerPart = getMyBunkerPart()
+    if not bunkerPart or not part then return false end
+    if not part:IsA("BasePart") then return false end
+
+    local half = bunkerPart.Size / 2
+    local localPos = bunkerPart.CFrame:PointToObjectSpace(part.Position)
+
+    return math.abs(localPos.X) <= half.X and
+           math.abs(localPos.Y) <= half.Y and
+           math.abs(localPos.Z) <= half.Z
+end
+
+-- Collect Food khusus di bunker sendiri
+MainTab:CreateButton({
+    Name = "Collect All Food in Bunker",
+    Callback = function()
+        local hrp = GetHRP()
+        if not hrp then return end
+        local bunkerPart = getMyBunkerPart()
+        if not bunkerPart then
+            return Rayfield:Notify({Title="Food", Content="Bunker tidak terdeteksi!", Duration=2})
+        end
+
+        local lastPos = hrp.CFrame
+
+        for _, tool in ipairs(workspace:GetChildren()) do
+            if tool:IsA("Tool") then
+                local handle = tool:FindFirstChild("Handle")
+
+                -- Filter hanya food
+                if handle and string.match(tool.Name, "Food") then
+                    local prompt = handle:FindFirstChildOfClass("ProximityPrompt")
+
+                    -- Cek apakah di dalam bunker kamu
+                    if prompt and isPartInMyBunker(handle) then
+                        pcall(function()
+                            hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                        end)
+                        task.wait(0.15)
+                        pcall(function() fireproximityprompt(prompt) end)
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+
+        task.wait(0.1)
+        pcall(function() hrp.CFrame = lastPos end)
+        Rayfield:Notify({Title="Food", Content="Collect selesai!", Duration=2})
+    end
+})
+
+
+
+----------- section--------------
 local FurnitureSection = MainTab:CreateSection("Furniture")
 ----market furn------
 
