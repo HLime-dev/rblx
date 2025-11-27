@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 12",
+   Name = "DN bug fixed 13",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -748,55 +748,80 @@ end)
     end
 })
 
+------tes----------
 MainTab:CreateButton({
-    Name = "Collect All Food (No Other Bunkers)",
+    Name = "Collect All Food (Skip Bunkers)",
     Callback = function()
+
         local hrp = GetHRP()
         if not hrp then return end
 
         local lastPos = hrp.CFrame
 
         local bunkersFolder = workspace:FindFirstChild("Bunkers")
-        local bunkerBoxes = {}
+        local bunkerCenters = {}
 
-        -- Kumpulkan bounding box seluruh bunker
+        ----------------------------------------------------
+        -- 1. Ambil data semua bunker
+        ----------------------------------------------------
         if bunkersFolder then
             for _, bunker in ipairs(bunkersFolder:GetChildren()) do
-                local primary = bunker:FindFirstChild("PrimaryPart") or bunker:FindFirstChildWhichIsA("BasePart")
-                if primary then
-                    table.insert(bunkerBoxes, primary)
+                
+                -- cari primarypart atau part terbesar
+                local biggestPart = nil
+                local maxSize = 0
+
+                for _, obj in ipairs(bunker:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local mag = obj.Size.Magnitude
+                        if mag > maxSize then
+                            maxSize = mag
+                            biggestPart = obj
+                        end
+                    end
+                end
+
+                if biggestPart then
+                    table.insert(bunkerCenters, {
+                        pos = biggestPart.Position,
+                        radius = (biggestPart.Size.Magnitude / 2) + 20 -- radius aman
+                    })
                 end
             end
         end
 
-        -- Cek apakah item berada di dalam bunker manapun
+        ----------------------------------------------------
+        -- 2. Cek apakah part berada di dalam salah satu bunker
+        ----------------------------------------------------
         local function IsInsideAnyBunker(part)
             if not part then return false end
-            local pos = part.Position
 
-            for _, b in ipairs(bunkerBoxes) do
-                local size = Vector3.new(50,50,50) -- ukuran bunker perkiraan
-                local minB = b.Position - size/2
-                local maxB = b.Position + size/2
-
-                if  pos.X >= minB.X and pos.X <= maxB.X and
-                    pos.Y >= minB.Y and pos.Y <= maxB.Y and
-                    pos.Z >= minB.Z and pos.Z <= maxB.Z then
-                    return true -- item ada di dalam bunker (punya orang lain)
+            for _, bunker in ipairs(bunkerCenters) do
+                if (part.Position - bunker.pos).Magnitude <= bunker.radius then
+                    return true
                 end
             end
 
             return false
         end
 
-        -- Loop semua food
+        ----------------------------------------------------
+        -- 3. Scan & collect food di map (skip dalam bunker)
+        ----------------------------------------------------
         for _, tool in ipairs(Workspace:GetDescendants()) do
             if tool:IsA("Tool") then
+
                 local handle = tool:FindFirstChild("Handle")
                 local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
 
-                -- Skip jika di dalam bunker mana saja
-                if handle and prompt and not IsInsideAnyBunker(handle) then
+                if handle and prompt then
+                    
+                    -- SKIP JIKA FOOD BERADA DI DALAM BUNKER
+                    if IsInsideAnyBunker(handle) then
+                        continue
+                    end
+
+                    -- COLLECT FOOD DI LUAR BUNKER
                     hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
                     task.wait(0.15)
                     pcall(function() fireproximityprompt(prompt) end)
@@ -806,9 +831,12 @@ MainTab:CreateButton({
         end
 
         task.wait(0.1)
-        pcall(function() hrp.CFrame = lastPos end)
+        pcall(function()
+            hrp.CFrame = lastPos
+        end)
     end
 })
+
 
 --------------------------------------------------------------------
 --=========================  TELEPORT TAB ==========================
