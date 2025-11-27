@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 10",
+   Name = "DN bug fixed 11",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -881,6 +881,7 @@ TeleportTab:CreateButton({
 --====================================================
 -- TELEPORT DROPDOWN FIXED
 --====================================================
+local TeleportSection = TeleportTab:CreateSection("Teleport")
 
 local teleportLocations = {
     ["My Bunker"] = function()
