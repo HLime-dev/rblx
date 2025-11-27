@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 9",
+   Name = "DN bug fixed 10",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -801,9 +801,8 @@ local playerDropdown = TeleportTab:CreateDropdown({
     Name = "Select Player",
     Options = GetPlayerList(),
     CurrentOption = nil,
-    Flag = "PlayerSelectDropdown",
     Callback = function(option)
-        selectedPlayer = option
+        selectedPlayer = option  -- table: { "PlayerName" }
     end
 })
 
@@ -818,7 +817,18 @@ TeleportTab:CreateButton({
             })
         end
 
-        local target = Players:FindFirstChild(selectedPlayer)
+        -- FIX: Ambil nama player dari table
+        local playerName = selectedPlayer[1]
+
+        if not playerName then
+            return Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Pilihan player kosong!",
+                Duration = 2
+            })
+        end
+
+        local target = Players:FindFirstChild(playerName)
 
         if not target then
             return Rayfield:Notify({
@@ -840,7 +850,7 @@ TeleportTab:CreateButton({
             myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 5, 0)
             Rayfield:Notify({
                 Title = "Teleport",
-                Content = "Berhasil teleport ke " .. selectedPlayer,
+                Content = "Berhasil teleport ke " .. playerName,
                 Duration = 2
             })
         else
