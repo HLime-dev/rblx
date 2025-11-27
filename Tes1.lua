@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed",
+   Name = "DN bug fixed 1",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -628,12 +628,30 @@ MainTab:CreateButton({
         local m = lib:Window("Bunker Furniture GUI")
 
         local dropdown = m:Dropdown("Select Furniture", ReturnBunkerFurnitureList(), function(option)
-            selectedBunkerFurniture = option
-        end)
+    -- Turtle-Lib kadang mengirim table seperti {Option = "Chair"}
+    if typeof(option) == "table" then
+        option = option.Option or option[1]
+    end
+
+    if typeof(option) == "string" then
+        selectedBunkerFurniture = option
+    else
+        warn("Invalid dropdown option:", option)
+    end
+end)
+
 
         m:Button("Refresh Furniture List", function()
             pcall(function()
-                dropdown:UpdateOptions(ReturnBunkerFurnitureList())
+               local list = ReturnBunkerFurnitureList()
+-- Turtle-lib membutuhkan dictionary format
+local dict = {}
+for _, v in ipairs(list) do
+    dict[v] = v
+end
+
+dropdown:Refresh(dict)
+
             end)
         end)
 
