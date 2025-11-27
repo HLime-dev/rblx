@@ -1,34 +1,48 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN9",
+   Name = "DN bug fixed",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
 })
 
+--==============================================================
+--== FIXED CORE SERVICES & STANDARDIZED FUNCTIONS
+--==============================================================
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
-local workspace = game:GetService("Workspace")
+local Workspace = game:GetService("Workspace")
+
 local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
--- Helper functions
+--=== Character Helper (TIDAK ADA DUPLIKASI LAGI) ===--
 local function GetChar()
     return plr.Character or plr.CharacterAdded:Wait()
 end
-local function GetHRP()
-    local char = GetChar()
-    return char and char:WaitForChild("HumanoidRootPart", 2)
-end
+
 local function GetHum()
     local char = GetChar()
-    return char and char:WaitForChild("Humanoid", 2)
+    return char:WaitForChild("Humanoid", 2)
 end
 
--------------------------------------------------------
---==================== UTILITY TAB ==================--
--------------------------------------------------------
+local function GetHRP()
+    local char = GetChar()
+    return char:WaitForChild("HumanoidRootPart", 2)
+end
+
+-- Function untuk HRP player lain (tidak bentrok)
+local function GetPlayerHRP(player)
+    return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+end
+
+
+
+--==============================================================
+--=========================  UTILITY TAB  =======================
+--==============================================================
+
 local UtilityTab = Window:CreateTab("Utility", 4483362458)
 
 UtilityTab:CreateSlider({
@@ -37,8 +51,8 @@ UtilityTab:CreateSlider({
     Increment = 1,
     CurrentValue = 16,
     Callback = function(val)
-        local char = GetChar()
-        if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = val end
+        local hum = GetHum()
+        if hum then hum.WalkSpeed = val end
     end,
 })
 
@@ -60,109 +74,135 @@ UtilityTab:CreateButton({
     end,
 })
 
--------------------------------------------------------
---==================== MAIN TAB =====================--
--------------------------------------------------------
+
+
+--==============================================================
+--=========================== MAIN TAB =========================
+--==============================================================
+
 local MainTab = Window:CreateTab("Main", 4483362458)
 
--- Noclip
+-------------------------------------------------------
+-- Noclip (FIXED: disconnect safe + restore colliders)
+-------------------------------------------------------
 MainTab:CreateToggle({
     Name = "Noclip",
     CurrentValue = false,
     Callback = function(state)
         getgenv().noclip = state
+
         if state then
-            if getgenv().noclipConn then getgenv().noclipConn:Disconnect() end
+            if getgenv().noclipConn then
+                getgenv().noclipConn:Disconnect()
+            end
+
             getgenv().noclipConn = game:GetService("RunService").Stepped:Connect(function()
+                if not getgenv().noclip then return end
                 local char = GetChar()
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                        part.CanQuery = false
                     end
                 end
             end)
+
         else
-            if getgenv().noclipConn then getgenv().noclipConn:Disconnect() getgenv().noclipConn = nil end
+            if getgenv().noclipConn then
+                getgenv().noclipConn:Disconnect()
+                getgenv().noclipConn = nil
+            end
+
+            -- restore karakter
+            local char = GetChar()
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                    part.CanQuery = true
+                end
+            end
         end
     end
 })
 
+
+-------------------------------------------------------
+--============ FOOD COLLECT SYSTEM (FIXED) ============
+-------------------------------------------------------
+
 local FoodSection = MainTab:CreateSection("Food")
--- Collect All Food
+
+--=== FIXED: scanning lebih aman ===--
 MainTab:CreateButton({
     Name = "Collect All Food",
     Callback = function()
         local hrp = GetHRP()
         if not hrp then return end
+
         local lastPos = hrp.CFrame
-        for _, v in ipairs(workspace:GetChildren()) do
-            if v:IsA("Tool") then
-                local handle = v:FindFirstChild("Handle")
+
+        for _, tool in ipairs(Workspace:GetDescendants()) do
+            if tool:IsA("Tool") then
+                local handle = tool:FindFirstChild("Handle")
                 local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
+
                 if handle and prompt then
-                    hrp.CFrame = handle.CFrame + Vector3.new(0,5,0)
-                    task.wait(0.2)
+                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                    task.wait(0.15)
                     pcall(function() fireproximityprompt(prompt) end)
+                    task.wait(0.05)
                 end
             end
         end
-        task.wait(0.2)
-        if lastPos then pcall(function() hrp.CFrame = lastPos end) end
+
+        task.wait(0.1)
+        pcall(function() hrp.CFrame = lastPos end)
     end
 })
 
+
+
+--=== DROP FOOD FIXED ===--
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
-        local char = GetChar()
-        local hrp = GetHRP()
         local hum = GetHum()
-        if not char or not hrp or not hum then return end
+        local dropEvent = RS:FindFirstChild("DropToolEvent")
 
-        local dropEvent = game:GetService("ReplicatedStorage"):WaitForChild("DropToolEvent", 2)
-        if not dropEvent or not dropEvent:IsA("RemoteEvent") then
-            warn("DropToolEvent not found!")
+        if not dropEvent then
+            warn("DropToolEvent not ditemukan")
             return
         end
 
-        -- Loop setiap tool di Backpack
         for _, tool in ipairs(plr.Backpack:GetChildren()) do
             if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
-                -- Equip tool
                 hum:EquipTool(tool)
-                task.wait(0.2)
+                task.wait(0.15)
 
-                -- Fire RemoteEvent ke server agar tool dianggap "dropped"
                 pcall(function()
-                    dropEvent:FireServer(tool) -- ✅ Ini yang sekarang digunakan untuk drop
+                    dropEvent:FireServer(tool)
                 end)
 
-                task.wait(0.3)
-
-                -- Unequip untuk reset state grip di server
+                task.wait(0.2)
                 hum:UnequipTools()
-                task.wait(0.1)
             end
         end
 
-        -- Pastikan state equip bersih
         hum:UnequipTools()
     end
 })
 
-------bunker food------------
+
+-----------------------------------------------------------------
+-- BUNKER BOUNDARY FOOD COLLECT (fixed kedeteksian & scan folder)
+-----------------------------------------------------------------
+
 local function getMyBunkerPart()
-    local hrp = GetHRP()
-    if not hrp then return nil end
-    local bunkersFolder = workspace:FindFirstChild("Bunkers")
-    if not bunkersFolder then return nil end
+    local bunkers = Workspace:FindFirstChild("Bunkers")
+    if not bunkers then return nil end
 
-    local myBunker = bunkersFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
-    if not myBunker then return nil end
-
-    return myBunker.PrimaryPart or myBunker:FindFirstChildWhichIsA("BasePart")
+    local my = bunkers:FindFirstChild(bunkerName)
+    return my and (my.PrimaryPart or my:FindFirstChildWhichIsA("BasePart"))
 end
 
 local function isPartInMyBunker(part)
@@ -173,56 +213,49 @@ local function isPartInMyBunker(part)
     local half = bunkerPart.Size / 2
     local localPos = bunkerPart.CFrame:PointToObjectSpace(part.Position)
 
-    return math.abs(localPos.X) <= half.X and
-           math.abs(localPos.Y) <= half.Y and
-           math.abs(localPos.Z) <= half.Z
+    return (
+        math.abs(localPos.X) <= half.X and
+        math.abs(localPos.Y) <= half.Y and
+        math.abs(localPos.Z) <= half.Z
+    )
 end
 
--- Collect Food khusus di bunker sendiri
+
 MainTab:CreateButton({
     Name = "Collect All Food in Bunker",
     Callback = function()
         local hrp = GetHRP()
         if not hrp then return end
-        local bunkerPart = getMyBunkerPart()
-        if not bunkerPart then
-            return Rayfield:Notify({Title="Food", Content="Bunker tidak terdeteksi!", Duration=2})
+
+        if not getMyBunkerPart() then
+            return Rayfield:Notify({Title="Food", Content="Bunker tidak ditemukan!", Duration=2})
         end
 
         local lastPos = hrp.CFrame
 
-        for _, tool in ipairs(workspace:GetChildren()) do
-            if tool:IsA("Tool") then
+        for _, tool in ipairs(Workspace:GetDescendants()) do
+            if tool:IsA("Tool") and tool.Name:match("Food") then
                 local handle = tool:FindFirstChild("Handle")
+                local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
 
-                -- Filter hanya food
-                if handle and string.match(tool.Name, "Food") then
-                    local prompt = handle:FindFirstChildOfClass("ProximityPrompt")
-
-                    -- Cek apakah di dalam bunker kamu
-                    if prompt and isPartInMyBunker(handle) then
-                        pcall(function()
-                            hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
-                        end)
-                        task.wait(0.15)
-                        pcall(function() fireproximityprompt(prompt) end)
-                        task.wait(0.05)
-                    end
+                if handle and prompt and isPartInMyBunker(handle) then
+                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                    task.wait(0.1)
+                    pcall(function() fireproximityprompt(prompt) end)
                 end
             end
         end
 
-        task.wait(0.1)
         pcall(function() hrp.CFrame = lastPos end)
         Rayfield:Notify({Title="Food", Content="Collect selesai!", Duration=2})
     end
 })
 
+--------------------------------------------------------------------
+--==================== FURNITURE — MARKET GUI ======================
+--------------------------------------------------------------------
 
-
------------ section--------------
 local FurnitureSection = MainTab:CreateSection("Furniture")
-----market furn------
 
 MainTab:CreateButton({
     Name = "Open Market Furniture GUI",
@@ -230,6 +263,7 @@ MainTab:CreateButton({
         local ok, lib = pcall(function()
             return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
         end)
+
         if not ok or not lib then
             warn("Gagal load Turtle-Lib")
             return
@@ -239,76 +273,94 @@ MainTab:CreateButton({
         local selected = nil
 
         -----------------------------------------------------------
-        -- MARKET BOUNDARIES (POLYGON)
+        -- FIXED MARKET BOUNDARY POLYGON
         -----------------------------------------------------------
+
         local MarketPoints = {
-            Vector2.new(68.7, -149.3),
-            Vector2.new(-160.4, -145.7),
-            Vector2.new(-166.9, 154.8),
-            Vector2.new(71.1, 158.7)
+            Vector2.new(  68.7, -149.3 ),
+            Vector2.new( -160.4, -145.7 ),
+            Vector2.new( -166.9, 154.8  ),
+            Vector2.new(  71.1, 158.7  )
         }
 
         local function PointInPolygon(point, polygon)
             local inside = false
             local j = #polygon
+
             for i = 1, #polygon do
                 local xi, zi = polygon[i].X, polygon[i].Y
                 local xj, zj = polygon[j].X, polygon[j].Y
-                local intersect = ((zi > point.Y) ~= (zj > point.Y)) and
-                    (point.X < (xj - xi) * (point.Y - zi) / (zj - zi + 0.0001) + xi)
+
+                local intersect = ((zi > point.Y) ~= (zj > point.Y))
+                  and (point.X < (xj - xi) * (point.Y - zi) / (zj - zi + 0.0001) + xi)
+
                 if intersect then
                     inside = not inside
                 end
+
                 j = i
             end
+
             return inside
         end
 
         local function IsInsideMarket(part)
+            if not part then return false end
             local pos = part.Position
-            local point = Vector2.new(pos.X, pos.Z)
-            return PointInPolygon(point, MarketPoints)
+            return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
         end
 
+
         -----------------------------------------------------------
-        -- Market folder detection
+        -- FIXED MARKET FOLDER DETECTION
         -----------------------------------------------------------
+
         local function GetMarketFolder()
-            local candidates = {
+            local possible = {
                 "MarketWyposazenie", "MarketWypo", "Wyposazenie",
-                "MarketWyposzenie", "MarketWypos",
+                "MarketWypos", "Wyposzenie"
             }
-            for _, name in ipairs(candidates) do
-                if workspace:FindFirstChild(name) then
-                    return workspace[name]
+
+            for _, name in ipairs(possible) do
+                if Workspace:FindFirstChild(name) then
+                    return Workspace[name]
                 end
             end
-            for _, v in ipairs(workspace:GetChildren()) do
-                if v:IsA("Folder") and v.Name:match("Wyposazenie") then
+
+            -- fallback: cari folder yang mirip
+            for _, v in ipairs(Workspace:GetChildren()) do
+                if v:IsA("Folder") and v.Name:match("Wypo") then
                     return v
                 end
             end
+
             return nil
         end
 
+
         -----------------------------------------------------------
-        -- Scan furniture (market boundaries enforced)
+        -- SCAN FURNITURE MARKET (FIXED)
         -----------------------------------------------------------
+
         local function ReturnFurnitureList()
-            local list, seen = {}, {}
             local market = GetMarketFolder()
-            if not market then return list end
+            if not market then return {} end
+
+            local list = {}
+            local seen = {}
 
             local function scan(folder)
-                for _, child in ipairs(folder:GetChildren()) do
-                    if child:IsA("Model") then
-                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
-                        if part and IsInsideMarket(part) and not seen[child.Name] then
-                            table.insert(list, child.Name)
-                            seen[child.Name] = true
+                for _, obj in ipairs(folder:GetChildren()) do
+                    if obj:IsA("Model") then
+                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+
+                        if part and IsInsideMarket(part) and not seen[obj.Name] then
+                            table.insert(list, obj.Name)
+                            seen[obj.Name] = true
                         end
-                    elseif child:IsA("Folder") then
-                        scan(child)
+
+                    elseif obj:IsA("Folder") then
+                        scan(obj)
                     end
                 end
             end
@@ -318,117 +370,144 @@ MainTab:CreateButton({
             return list
         end
 
+
         -----------------------------------------------------------
-        -- Find model in market & inside boundaries
+        -- FIND FURNITURE IN MARKET (FIXED)
         -----------------------------------------------------------
+
         local function FindModelInMarketByName(name)
             local market = GetMarketFolder()
             if not market then return nil end
-            local found = nil
+
+            local result = nil
 
             local function search(folder)
-                for _, child in ipairs(folder:GetChildren()) do
-                    if child:IsA("Model") and child.Name == name then
-                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                if result then return end
+
+                for _, obj in ipairs(folder:GetChildren()) do
+                    if obj:IsA("Model") and obj.Name == name then
+                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+
                         if part and IsInsideMarket(part) then
-                            found = child
+                            result = obj
                             return
                         end
-                    elseif child:IsA("Folder") then
-                        search(child)
-                        if found then return end
+                    end
+
+                    if obj:IsA("Folder") then
+                        search(obj)
                     end
                 end
             end
 
             search(market)
-            return found
+            return result
         end
 
+
         -----------------------------------------------------------
-        -- Pickup furniture (market-bound only)
+        -- PICKUP FURNITURE IN MARKET (FIXED)
         -----------------------------------------------------------
+
         local function PickupFurnitureByName(name)
             local model = FindModelInMarketByName(name)
+
             if model then
-                pcall(function() RS.PickupItemEvent:FireServer(model) end)
+                pcall(function()
+                    RS.PickupItemEvent:FireServer(model)
+                end)
                 return true
             end
+
             return false
         end
 
-        -----------------------------------------------------------
-        -- Teleport to furniture (market-bound only)
-        -----------------------------------------------------------
-        -----------------------------------------------------------
--- Teleport to furniture (market-bound only) lalu kembali
------------------------------------------------------------
-local function TeleportToFurnitureByName(name)
-    local hrp = GetHRP()
-    if not hrp then return end
 
-    -- Simpan posisi awal sebelum teleport
-    local originalCFrame = hrp.CFrame
+        -----------------------------------------------------------
+        -- TELEPORT TO FURNITURE (WITH RETURN)
+        -----------------------------------------------------------
 
-    local model = FindModelInMarketByName(name)
-    if model then
-        local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-        if part then
-            -- Teleport ke furniture
+        local function TeleportToFurnitureByName(name)
+            local hrp = GetHRP()
+            if not hrp then return end
+
+            local original = hrp.CFrame
+            local model = FindModelInMarketByName(name)
+
+            if not model then
+                warn("Furniture berada di luar boundary market!")
+                return
+            end
+
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if not part then return end
+
             hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
 
-            -- Tunggu 5 detik lalu kembali ke posisi awal
             task.delay(5, function()
-                if hrp and originalCFrame then
+                if hrp then
                     pcall(function()
-                        hrp.CFrame = originalCFrame
+                        hrp.CFrame = original
                     end)
                 end
             end)
         end
-    else
-        warn("Furniture berada di luar Market!")
-    end
-end
 
 
         -----------------------------------------------------------
-        -- GUI Components
+        -- GUI UI COMPONENTS (DROPDOWN FIXED)
         -----------------------------------------------------------
+
         local furnOptions = ReturnFurnitureList()
+
         local furnDropdown = m:Dropdown("Selected Furniture", furnOptions, function(option)
             selected = option
         end)
 
         m:Button("Refresh Furniture List", function()
             local newList = ReturnFurnitureList()
-            pcall(function() furnDropdown:UpdateOptions(newList) end)
+            pcall(function()
+                furnDropdown:UpdateOptions(newList)
+            end)
         end)
 
         m:Button("Bring Selected Furniture", function()
-            if not selected then return warn("Pilih furniture dulu!") end
+            if not selected then
+                warn("Pilih furniture terlebih dahulu!")
+                return
+            end
+
             if not PickupFurnitureByName(selected) then
-                warn("Furniture tidak ditemukan atau berada di luar market!")
+                warn("Tidak ditemukan atau di luar Market!")
             end
         end)
 
         m:Button("Teleport to Furniture", function()
-            if not selected then return warn("Pilih furniture dulu!") end
+            if not selected then
+                warn("Pilih furniture terlebih dahulu!")
+                return
+            end
+
             TeleportToFurnitureByName(selected)
         end)
 
         m:Button("Close GUI", function()
-            if m and m.Destroy then pcall(function() m:Destroy() end) end
+            pcall(function()
+                if m and m.Destroy then m:Destroy() end
+            end)
         end)
     end
 })
 
 
--- Furniture Bunker GUI (CLEAN)
+
+--------------------------------------------------------------------
+--==================== BUNKER FURNITURE GUI =======================
+--------------------------------------------------------------------
+
 MainTab:CreateButton({
     Name = "Open Bunker Furniture GUI",
     Callback = function()
-        -- Load library
         local ok, lib = pcall(function()
             return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
         end)
@@ -437,157 +516,176 @@ MainTab:CreateButton({
             return
         end
 
-        -- Jalankan GUI furniture BUNKER-mu (kode asli milikmu, tidak diubah)
         local selectedBunkerFurniture = nil
+
+        -----------------------------------------------------------
+        -- Bunker Helper
+        -----------------------------------------------------------
+        local function getBunkerCF()
+            local bunkers = Workspace:FindFirstChild("Bunkers")
+            if not bunkers then return nil end
+
+            local my = bunkers:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+            if not my then return nil end
+
+            return my.PrimaryPart or my:FindFirstChildWhichIsA("BasePart")
+        end
+
+        local function isInBunker(part)
+            local base = getBunkerCF()
+            if not base or not part then return false end
+
+            -- ukuran aman 50x50x50 (tetap sesuai script aslimu)
+            local size = Vector3.new(50,50,50)
+            local minB = base.Position - size/2
+            local maxB = base.Position + size/2
+            local p = part.Position
+
+            return (
+                p.X >= minB.X and p.X <= maxB.X and
+                p.Y >= minB.Y and p.Y <= maxB.Y and
+                p.Z >= minB.Z and p.Z <= maxB.Z
+            )
+        end
+
+
+        -----------------------------------------------------------
+        -- SCAN FURNITURE BUNKER (FIXED)
+        -----------------------------------------------------------
 
         local function ReturnBunkerFurnitureList()
             local list = {}
             local seen = {}
-            local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-            local bunkerFolder = workspace:FindFirstChild("Bunkers")
-            if not wyposFolder or not bunkerFolder then return list end
+            local wypos = Workspace:FindFirstChild("Wyposazenie")
+                or Workspace:FindFirstChild("MarketWyposazenie")
 
-            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
-            if not bunkerModel then return list end
-            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
-            if not bunkerCF then return list end
+            if not wypos then return list end
 
-            local function isInBunker(part)
-                local size = Vector3.new(50,50,50)
-                local minBound = bunkerCF.Position - size/2
-                local maxBound = bunkerCF.Position + size/2
-                local pos = part.Position
-                return (pos.X >= minBound.X and pos.X <= maxBound.X) and
-                       (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
-                       (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
-            end
+            for _, obj in ipairs(wypos:GetDescendants()) do
+                if obj:IsA("Model") then
+                    local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
 
-            local function scan(folder)
-                for _, child in ipairs(folder:GetChildren()) do
-                    if child:IsA("Model") and child:FindFirstChildWhichIsA("BasePart", true) then
-                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
-                        if part and isInBunker(part) and not seen[child.Name] then
-                            table.insert(list, child.Name)
-                            seen[child.Name] = true
-                        end
-                    elseif child:IsA("Folder") then
-                        scan(child)
+                    if part and isInBunker(part) and not seen[obj.Name] then
+                        table.insert(list, obj.Name)
+                        seen[obj.Name] = true
                     end
                 end
             end
 
-            scan(wyposFolder)
             table.sort(list)
             return list
         end
 
+
+        -----------------------------------------------------------
+        -- FIND FURNITURE (BUNKER)
+        -----------------------------------------------------------
+
         local function FindModelInBunkerByName(name)
-            local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
-            local bunkerFolder = workspace:FindFirstChild("Bunkers")
-            if not wyposFolder or not bunkerFolder then return nil end
+            local wypos = Workspace:FindFirstChild("Wyposazenie")
+                or Workspace:FindFirstChild("MarketWyposazenie")
 
-            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
-            if not bunkerModel then return nil end
-            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
-            if not bunkerCF then return nil end
-
-            local function isInBunker(part)
-                local size = Vector3.new(50,50,50)
-                local minBound = bunkerCF.Position - size/2
-                local maxBound = bunkerCF.Position + size/2
-                local pos = part.Position
-                return (pos.X >= minBound.X and pos.X <= maxBound.X) and
-                       (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
-                       (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
-            end
+            if not wypos then return nil end
 
             local found = nil
-            local function scan(folder)
-                for _, child in ipairs(folder:GetChildren()) do
-                    if child:IsA("Model") and child.Name == name then
-                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
-                        if part and isInBunker(part) then
-                            found = child
-                            return
-                        end
-                    elseif child:IsA("Folder") then
-                        scan(child)
-                        if found then return end
+
+            for _, obj in ipairs(wypos:GetDescendants()) do
+                if obj:IsA("Model") and obj.Name == name then
+                    local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if part and isInBunker(part) then
+                        found = obj
+                        break
                     end
                 end
             end
 
-            scan(wyposFolder)
             return found
         end
+
+
+        -----------------------------------------------------------
+        -- TELEPORT BUNKER FURNITURE
+        -----------------------------------------------------------
 
         local function TeleportToFurniture(name)
             local hrp = GetHRP()
             if not hrp then return end
+
             local model = FindModelInBunkerByName(name)
-            if model then
-                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-                if part then
-                    hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
-                end
-            end
+            if not model then return end
+
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if not part then return end
+
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
         end
 
-        local ok2, _ = pcall(function()
-            local m = lib:Window("Bunker Furniture GUI")
 
-            local dropdown = m:Dropdown("Select Furniture", ReturnBunkerFurnitureList(), function(option)
-                selectedBunkerFurniture = option
-            end)
+        -----------------------------------------------------------
+        -- GUI
+        -----------------------------------------------------------
 
-            m:Button("Refresh Furniture List", function()
-                local newList = ReturnBunkerFurnitureList()
-                pcall(function() dropdown:UpdateOptions(newList) end)
-            end)
+        local m = lib:Window("Bunker Furniture GUI")
 
-            m:Button("Bring Selected Furniture", function()
-                if selectedBunkerFurniture then
-                    local model = FindModelInBunkerByName(selectedBunkerFurniture)
-                    if model then
-                        pcall(function() RS.PickupItemEvent:FireServer(model) end)
-                    else
-                        warn("Furniture tidak ada di bunker!")
-                    end
-                else
-                    warn("Pilih furniture dulu!")
-                end
-            end)
+        local dropdown = m:Dropdown("Select Furniture", ReturnBunkerFurnitureList(), function(option)
+            selectedBunkerFurniture = option
+        end)
 
-            m:Button("Teleport to Selected Furniture", function()
-                if selectedBunkerFurniture then
-                    TeleportToFurniture(selectedBunkerFurniture)
-                else
-                    warn("Pilih furniture dulu!")
-                end
-            end)
-
-            m:Button("Close GUI", function()
-                if m and m.Destroy then pcall(function() m:Destroy() end) end
+        m:Button("Refresh Furniture List", function()
+            pcall(function()
+                dropdown:UpdateOptions(ReturnBunkerFurnitureList())
             end)
         end)
 
-        if not ok2 then warn("Gagal membuat Furniture GUI") end
+        m:Button("Bring Selected Furniture", function()
+            if not selectedBunkerFurniture then
+                warn("Pilih furniture dulu!")
+                return
+            end
+
+            local model = FindModelInBunkerByName(selectedBunkerFurniture)
+            if model then
+                pcall(function()
+                    RS.PickupItemEvent:FireServer(model)
+                end)
+            else
+                warn("Furniture tidak ditemukan di bunker!")
+            end
+        end)
+
+        m:Button("Teleport to Selected Furniture", function()
+            if selectedBunkerFurniture then
+                TeleportToFurniture(selectedBunkerFurniture)
+            else
+                warn("Pilih furniture dulu!")
+            end
+        end)
+
+        m:Button("Close GUI", function()
+            pcall(function()
+                if m and m.Destroy then m:Destroy() end
+            end)
+        end)
     end
 })
 
+--------------------------------------------------------------------
+--=========================  TELEPORT TAB ==========================
+--------------------------------------------------------------------
 
--------------------------------------------------------
---==================== TELEPORT TAB ==================--
--------------------------------------------------------
 local TeleportTab = Window:CreateTab("Teleport", 4483362458)
 
 TeleportTab:CreateButton({
     Name = "Teleport to Bunker",
     Callback = function()
         local hrp = GetHRP()
-        local bunkers = workspace:FindFirstChild("Bunkers")
+        local bunkers = Workspace:FindFirstChild("Bunkers")
+
         if hrp and bunkers and bunkerName and bunkers:FindFirstChild(bunkerName) then
-            hrp.CFrame = bunkers[bunkerName].SpawnLocation.CFrame
+            local spawn = bunkers[bunkerName]:FindFirstChild("SpawnLocation")
+            if spawn then
+                hrp.CFrame = spawn.CFrame + Vector3.new(0, 3, 0)
+            end
         end
     end
 })
@@ -596,88 +694,105 @@ TeleportTab:CreateButton({
     Name = "Teleport to Market",
     Callback = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(143,5,-118) end
+        if hrp then
+            hrp.CFrame = CFrame.new(143, 5, -118)
+        end
     end
 })
 
-local PlayerSection = TeleportTab:CreateSection("Player")
--- Player teleport dropdown
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
-local selectedPlayer = nil
 
-local function GetHRP(player)
-    player = player or plr
-    return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-end
+--------------------------------------------------------------------
+--========================= PLAYER TELEPORT ========================
+--------------------------------------------------------------------
+
+local PlayerSection = TeleportTab:CreateSection("Player")
+
+local selectedPlayer = nil
 
 local function GetPlayerList()
     local list = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= plr then
-            table.insert(list, p.Name)
-        end
+        if p ~= plr then table.insert(list, p.Name) end
     end
     return list
 end
 
---// Dropdown pilih player
 local playerDropdown = TeleportTab:CreateDropdown({
     Name = "Select Player",
     Options = GetPlayerList(),
     CurrentOption = nil,
     Flag = "PlayerSelectDropdown",
     Callback = function(option)
-        selectedPlayer = option -- ✅ FIX: simpan ke variabel yang benar
+        selectedPlayer = option
     end
 })
 
---// Tombol Teleport ke player yang dipilih
 TeleportTab:CreateButton({
     Name = "Teleport to Selected Player",
     Callback = function()
         if not selectedPlayer then
-            return Rayfield:Notify({Title="Teleport", Content="Belum memilih player!", Duration=2})
+            return Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Belum memilih player!",
+                Duration = 2
+            })
         end
 
         local target = Players:FindFirstChild(selectedPlayer)
+
         if not target then
-            return Rayfield:Notify({Title="Teleport", Content="Player tidak ditemukan!", Duration=2})
+            return Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Player tidak ditemukan!",
+                Duration = 2
+            })
         end
 
-        -- Tunggu character jika masih loading
         if not target.Character then
             target.CharacterAdded:Wait()
             task.wait(0.2)
         end
 
-        local tHRP = GetHRP(target)
+        local tHRP = GetPlayerHRP(target)
         local myHRP = GetHRP()
 
         if tHRP and myHRP then
-            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 5, 0) -- ✅ FIX: teleport stabil 5 stud di atas
-            Rayfield:Notify({Title="Teleport", Content="Berhasil teleport ke "..selectedPlayer, Duration=2})
+            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 5, 0)
+            Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Berhasil teleport ke " .. selectedPlayer,
+                Duration = 2
+            })
         else
-            Rayfield:Notify({Title="Teleport", Content="Target belum spawn!", Duration=2})
+            Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Target belum spawn!",
+                Duration = 2
+            })
         end
     end
 })
 
---// Tombol refresh daftar player
 TeleportTab:CreateButton({
     Name = "Refresh Player List",
     Callback = function()
         pcall(function()
-            playerDropdown:UpdateOptions(GetPlayerList()) -- ✅ FIX: refresh tanpa error
-            Rayfield:Notify({Title="Teleport", Content="Player list diperbarui!", Duration=2})
+            playerDropdown:UpdateOptions(GetPlayerList())
         end)
+
+        Rayfield:Notify({
+            Title = "Teleport",
+            Content = "Player list diperbarui!",
+            Duration = 2
+        })
     end
 })
 
 
--------------------------------------------------------
---==================== SETTINGS TAB =================--
--------------------------------------------------------
+--------------------------------------------------------------------
+--============================= SETTINGS TAB =======================
+--------------------------------------------------------------------
+
 local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
 SettingsTab:CreateButton({
@@ -686,37 +801,63 @@ SettingsTab:CreateButton({
         pcall(function()
             loadstring(game:HttpGet('https://raw.githubusercontent.com/Lucasfin000/SpaceHub/main/UESP'))()
         end)
-    end,
+    end
 })
 
--- Monsters ESP
+
+--------------------------------------------------------------------
+--======================== MONSTER ESP (FIXED) =====================
+--------------------------------------------------------------------
+
 SettingsTab:CreateToggle({
     Name = "Monsters ESP",
     CurrentValue = false,
     Callback = function(state)
         getgenv().esp = state
+
         if state then
+            -- Loop ESP
             task.spawn(function()
                 while getgenv().esp do
-                    local nightFolder
-                    for _, f in ipairs(workspace:GetChildren()) do
-                        if f:IsA("Folder") and f.Name:match("Night") then nightFolder = f break end
+                    local nightFolder = nil
+
+                    for _, f in ipairs(Workspace:GetChildren()) do
+                        if f:IsA("Folder") and f.Name:match("Night") then
+                            nightFolder = f
+                            break
+                        end
                     end
+
                     if nightFolder then
-                        for _, m in ipairs(nightFolder:GetChildren()) do
-                            if m:IsA("Model") and m:FindFirstChild("HumanoidRootPart") and not m:FindFirstChild("Highlight") then
-                                Instance.new("Highlight", m)
+                        for _, monster in ipairs(nightFolder:GetChildren()) do
+                            if monster:IsA("Model") and monster:FindFirstChild("HumanoidRootPart") then
+
+                                -- Tidak double ESP
+                                if not monster:FindFirstChild("Highlight") then
+                                    local hl = Instance.new("Highlight")
+                                    hl.FillColor = Color3.new(1, 0, 0)
+                                    hl.OutlineColor = Color3.new(1, 1, 1)
+                                    hl.Parent = monster
+                                end
                             end
                         end
                     end
+
                     task.wait(1)
                 end
             end)
+
         else
-            for _, f in ipairs(workspace:GetChildren()) do
+            -- Remove ESP saat dimatikan
+            for _, f in ipairs(Workspace:GetChildren()) do
                 if f:IsA("Folder") and f.Name:match("Night") then
-                    for _, m in ipairs(f:GetChildren()) do
-                        if m:FindFirstChild("Highlight") then pcall(function() m.Highlight:Destroy() end) end
+                    for _, monster in ipairs(f:GetChildren()) do
+                        local hl = monster:FindFirstChild("Highlight")
+                        if hl then
+                            pcall(function()
+                                hl:Destroy()
+                            end)
+                        end
                     end
                 end
             end
@@ -724,9 +865,16 @@ SettingsTab:CreateToggle({
     end
 })
 
+
+--------------------------------------------------------------------
+--============================ CLOSE GUI ==========================
+--------------------------------------------------------------------
+
 SettingsTab:CreateButton({
     Name = "Close GUI",
     Callback = function()
-        Rayfield:Destroy()
+        pcall(function()
+            Rayfield:Destroy()
+        end)
     end
 })
