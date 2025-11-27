@@ -1,31 +1,27 @@
-local listCommands = {}
+--// Buat ScreenGUI
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.CoreGui
 
--- Scan RemoteEvents
-for _,v in pairs(game:GetDescendants()) do
-    if v:IsA("RemoteEvent") then
-        table.insert(listCommands, "[RemoteEvent] " .. v:GetFullName())
-    elseif v:IsA("RemoteFunction") then
-        table.insert(listCommands, "[RemoteFunction] " .. v:GetFullName())
-    elseif v:IsA("BindableEvent") then
-        table.insert(listCommands, "[BindableEvent] " .. v:GetFullName())
-    elseif v:IsA("ProximityPrompt") then
-        table.insert(listCommands, "[ProximityPrompt] " .. v:GetFullName())
+--// Buat TextLabel
+local label = Instance.new("TextLabel")
+label.Parent = gui
+label.Size = UDim2.new(0, 250, 0, 100)
+label.Position = UDim2.new(0, 10, 0, 10)
+label.BackgroundTransparency = 0.3
+label.TextScaled = true
+label.Font = Enum.Font.GothamBold
+label.TextColor3 = Color3.new(1, 1, 1)
+label.BackgroundColor3 = Color3.new(0, 0, 0)
+label.Text = "Loading..."
+
+--// Update koordinat secara real-time
+game:GetService("RunService").RenderStepped:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local pos = char.HumanoidRootPart.Position
+        label.Text = string.format(
+            "Koordinat Kamu:\nX: %.1f\nY: %.1f\nZ: %.1f",
+            pos.X, pos.Y, pos.Z
+        )
     end
-end
-
--- Scan ContextActionService registered actions
-local CAS = game:GetService("ContextActionService")
-local actions = CAS:GetAllBoundActionInfo()
-
-for actionName,info in pairs(actions) do
-    table.insert(listCommands, "[Action] " .. actionName)
-end
-
--- Format hasil
-local finalText = "=== Dangerous Night Command Scan ===\n\n"
-for _,cmd in pairs(listCommands) do
-    finalText = finalText .. cmd .. "\n"
-end
-
--- Simpan ke file lokal
-writefile("DangerousNight_Commands.txt", finalText)
+end)
