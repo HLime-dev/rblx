@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN7",
+   Name = "DN8",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -112,31 +112,37 @@ MainTab:CreateButton({
     end
 })
 
--- Drop All Food (SINGLE DROP, NO KILL CHARACTER)
+-- Drop All Food (REAL SINGLE DROP)
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
         local char = GetChar()
         local hrp = GetHRP()
-        if not char or not hrp then return end
+        local hum = GetHum()
+        if not char or not hrp or not hum then return end
 
         for _, tool in ipairs(plr.Backpack:GetChildren()) do
             if tool:IsA("Tool") then
-                -- Equip lalu drop satu per satu
-                char.Humanoid:EquipTool(tool)
-                task.wait(0.15)
+                -- Equip dulu
+                hum:EquipTool(tool)
+                task.wait(0.2)
 
+                -- Paksa unequip dan lempar ke workspace (ground)
                 pcall(function()
-                    tool.Parent = workspace  -- lempar ke ground
-                    task.wait(0.05)
-                    tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) -- taruh di depan player
+                    -- Lepas dari humanoid grip
+                    tool.Parent = workspace
+                    task.wait()
+
+                    -- Kalau punya Handle, jatuhkan ke depan player biar bisa ditake
+                    if tool:FindFirstChild("Handle") then
+                        tool.Handle.Anchored = false
+                        tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
+                    end
                 end)
 
-                task.wait(0.2) -- jeda antar drop
+                task.wait(0.3) -- jeda per drop
             end
         end
-
-        task.wait(0.2) -- finish buffer
     end
 })
 
