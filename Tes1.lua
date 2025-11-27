@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 7",
+   Name = "DN bug fixed 8",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -865,6 +865,65 @@ TeleportTab:CreateButton({
             Content = "Player list diperbarui!",
             Duration = 2
         })
+    end
+})
+
+--====================================================
+-- TELEPORT DROPDOWN (HEMAT RUANG)
+--====================================================
+
+local teleportLocations = {
+    ["My Bunker"] = function()
+        local hrp = GetHRP()
+        local bunkers = workspace:FindFirstChild("Bunkers")
+        local bunkerName = plr:GetAttribute("AssignedBunkerName")
+
+        if hrp and bunkers and bunkerName and bunkers:FindFirstChild(bunkerName) then
+            hrp.CFrame = bunkers[bunkerName].SpawnLocation.CFrame
+        end
+    end,
+
+    ["Market"] = function()
+        local hrp = GetHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(143, 5, -118)
+        end
+    end,
+}
+
+local selectedTP = nil
+
+local teleportDropdown = TeleportTab:CreateDropdown({
+    Name = "Select Teleport Location",
+    Options = {"My Bunker", "Market"},
+    CurrentOption = nil,
+    Flag = "TeleportLocationDropdown",
+    Callback = function(option)
+        selectedTP = option
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "Teleport",
+    Callback = function()
+        if not selectedTP then
+            return Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Pilih lokasi dulu!",
+                Duration = 2
+            })
+        end
+
+        local func = teleportLocations[selectedTP]
+        if func then
+            func()
+        else
+            Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Lokasi tidak ditemukan!",
+                Duration = 2
+            })
+        end
     end
 })
 
