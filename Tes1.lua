@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 8",
+   Name = "DN bug fixed 9",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -869,7 +869,7 @@ TeleportTab:CreateButton({
 })
 
 --====================================================
--- TELEPORT DROPDOWN (HEMAT RUANG)
+-- TELEPORT DROPDOWN FIXED
 --====================================================
 
 local teleportLocations = {
@@ -897,9 +897,8 @@ local teleportDropdown = TeleportTab:CreateDropdown({
     Name = "Select Teleport Location",
     Options = {"My Bunker", "Market"},
     CurrentOption = nil,
-    Flag = "TeleportLocationDropdown",
     Callback = function(option)
-        selectedTP = option
+        selectedTP = option   -- "option" = { "My Bunker" } (table)
     end
 })
 
@@ -914,18 +913,23 @@ TeleportTab:CreateButton({
             })
         end
 
-        local func = teleportLocations[selectedTP]
+        -- FIX: Ambil elemen pertama dari table
+        local key = selectedTP[1]
+
+        local func = teleportLocations[key]
+
         if func then
             func()
         else
             Rayfield:Notify({
                 Title = "Teleport",
-                Content = "Lokasi tidak ditemukan!",
+                Content = "Lokasi tidak ditemukan: " .. tostring(key),
                 Duration = 2
             })
         end
     end
 })
+
 
 
 --------------------------------------------------------------------
