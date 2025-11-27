@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 15",
+   Name = "DN bug fixed 16",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -834,6 +834,64 @@ MainTab:CreateButton({
         pcall(function()
             hrp.CFrame = lastPos
         end)
+    end
+})
+
+--------------
+--=== DROP TOOL SELECTION ===--
+local selectedTool = nil
+
+-- Buat dropdown daftar Tool
+MainTab:CreateDropdown({
+    Name = "Select Tool to Drop",
+    Options = (function()
+        local list = {}
+        for _, tool in ipairs(plr.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                table.insert(list, tool.Name)
+            end
+        end
+        return list
+    end)(),
+    CurrentOption = {},
+    MultipleOptions = false,
+    Callback = function(opt)
+        selectedTool = opt[1]
+    end,
+})
+
+-- Tombol untuk drop Tool yang dipilih
+MainTab:CreateButton({
+    Name = "Drop Selected Tool",
+    Callback = function()
+        if not selectedTool then
+            warn("Pilih Tool dulu di dropdown!")
+            return
+        end
+
+        local hum = GetHum()
+        local dropEvent = RS:FindFirstChild("DropToolEvent")
+        if not dropEvent then
+            warn("DropToolEvent tidak ditemukan")
+            return
+        end
+
+        for _, tool in ipairs(plr.Backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == selectedTool and tool:FindFirstChild("Handle") then
+                hum:EquipTool(tool)
+                task.wait(0.15)
+
+                pcall(function()
+                    dropEvent:FireServer(tool)
+                end)
+
+                task.wait(0.2)
+                hum:UnequipTools()
+                break
+            end
+        end
+
+        hum:UnequipTools()
     end
 })
 
