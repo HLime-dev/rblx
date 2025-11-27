@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN7",
+   Name = "DN1",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -534,7 +534,15 @@ TeleportTab:CreateButton({
 
 local PlayerSection = TeleportTab:CreateSection("Player")
 -- Player teleport dropdown
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
 local selectedPlayer = nil
+
+local function GetHRP(player)
+    player = player or plr
+    return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+end
+
 local function GetPlayerList()
     local list = {}
     for _, p in ipairs(Players:GetPlayers()) do
@@ -545,42 +553,59 @@ local function GetPlayerList()
     return list
 end
 
+--// Dropdown pilih player
 local playerDropdown = TeleportTab:CreateDropdown({
     Name = "Select Player",
     Options = GetPlayerList(),
+    CurrentOption = nil,
+    Flag = "PlayerSelectDropdown",
     Callback = function(option)
-        selectedPlayer = option
+        selectedPlayer = option -- ✅ FIX: simpan ke variabel yang benar
     end
 })
 
+--// Tombol Teleport ke player yang dipilih
 TeleportTab:CreateButton({
     Name = "Teleport to Selected Player",
     Callback = function()
         if not selectedPlayer then
-            warn("Belum memilih player.")
-            return
+            return Rayfield:Notify({Title="Teleport", Content="Belum memilih player!", Duration=2})
         end
+
         local target = Players:FindFirstChild(selectedPlayer)
-        if target and target.Character then
-            local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
-            local hrp = GetHRP()
-            if tHRP and hrp then
-                hrp.CFrame = tHRP.CFrame + Vector3.new(0,5,0)
-            else
-                warn("Target belum spawn atau HumanoidRootPart tidak ada.")
-            end
+        if not target then
+            return Rayfield:Notify({Title="Teleport", Content="Player tidak ditemukan!", Duration=2})
+        end
+
+        -- Tunggu character jika masih loading
+        if not target.Character then
+            target.CharacterAdded:Wait()
+            task.wait(0.2)
+        end
+
+        local tHRP = GetHRP(target)
+        local myHRP = GetHRP()
+
+        if tHRP and myHRP then
+            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 5, 0) -- ✅ FIX: teleport stabil 5 stud di atas
+            Rayfield:Notify({Title="Teleport", Content="Berhasil teleport ke "..selectedPlayer, Duration=2})
         else
-            warn("Player tidak tersedia / belum spawn.")
+            Rayfield:Notify({Title="Teleport", Content="Target belum spawn!", Duration=2})
         end
     end
 })
 
+--// Tombol refresh daftar player
 TeleportTab:CreateButton({
     Name = "Refresh Player List",
     Callback = function()
-        pcall(function() playerDropdown:UpdateOptions(GetPlayerList()) end)
+        pcall(function()
+            playerDropdown:UpdateOptions(GetPlayerList()) -- ✅ FIX: refresh tanpa error
+            Rayfield:Notify({Title="Teleport", Content="Player list diperbarui!", Duration=2})
+        end)
     end
 })
+
 
 -------------------------------------------------------
 --==================== SETTINGS TAB =================--
