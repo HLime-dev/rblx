@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 3",
+   Name = "DN bug fixed 4",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -304,11 +304,18 @@ MainTab:CreateButton({
             return inside
         end
 
-        local function IsInsideMarket(part)
-            if not part then return false end
-            local pos = part.Position
-            return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
-        end
+       local function IsInsideMarket(part)
+    if not part then return false end
+
+    local pos = part.Position
+
+    -- REQUIREMENT: harus berada di atas Y = 6
+    if pos.Y < 6 then
+        return false
+    end
+
+    return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
+end
 
 
         -----------------------------------------------------------
