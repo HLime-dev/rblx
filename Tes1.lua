@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 2",
+   Name = "DN bug fixed 3",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -640,12 +640,32 @@ MainTab:CreateButton({
             end)
 
             m:Button("Teleport to Selected Furniture", function()
-                if selectedBunkerFurniture then
-                    TeleportToFurniture(selectedBunkerFurniture)
-                else
-                    warn("Pilih furniture dulu!")
-                end
+    if not selectedBunkerFurniture then
+        return warn("Pilih furniture dulu!")
+    end
+
+    local hrp = GetHRP()
+    if not hrp then
+        return warn("HRP tidak ditemukan!")
+    end
+
+    -- Simpan posisi awal
+    local originalCFrame = hrp.CFrame
+
+    -- Teleport ke furniture
+    TeleportToFurniture(selectedBunkerFurniture)
+
+    -- Setelah 5 detik kembali ke posisi awal
+    task.delay(5, function()
+        local hrp2 = GetHRP()
+        if hrp2 then
+            pcall(function()
+                hrp2.CFrame = originalCFrame
             end)
+        end
+    end)
+end)
+
 
             m:Button("Close GUI", function()
                 if m and m.Destroy then pcall(function() m:Destroy() end) end
