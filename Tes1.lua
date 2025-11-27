@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 16",
+   Name = "DN bug fixed 17",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -838,21 +838,27 @@ MainTab:CreateButton({
 })
 
 --------------
---=== DROP TOOL SELECTION ===--
+--=== DROP SAME NAME TOOLS + REFRESH ===--
+
 local selectedTool = nil
 
--- Buat dropdown daftar Tool
-MainTab:CreateDropdown({
-    Name = "Select Tool to Drop",
-    Options = (function()
-        local list = {}
-        for _, tool in ipairs(plr.Backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                table.insert(list, tool.Name)
-            end
+-- FUNCTION UNTUK AMBIL DAFTAR TOOL DI BACKPACK
+local function getToolNameList()
+    local list = {}
+    local unique = {}
+    for _, tool in ipairs(plr.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and not unique[tool.Name] then
+            unique[tool.Name] = true
+            table.insert(list, tool.Name)
         end
-        return list
-    end)(),
+    end
+    return list
+end
+
+-- BUAT DROPDOWN AWAL
+local toolDropdown = MainTab:CreateDropdown({
+    Name = "Select Tool to Drop",
+    Options = getToolNameList(),
     CurrentOption = {},
     MultipleOptions = false,
     Callback = function(opt)
@@ -860,9 +866,22 @@ MainTab:CreateDropdown({
     end,
 })
 
--- Tombol untuk drop Tool yang dipilih
+-- TOMBOL REFRESH DROPDOWN
 MainTab:CreateButton({
-    Name = "Drop Selected Tool",
+    Name = "Refresh Tool List",
+    Callback = function()
+        selectedTool = nil
+        -- Update isi dropdown dengan daftar terbaru
+        toolDropdown:Refresh({
+            Options = getToolNameList(),
+            CurrentOption = {},
+        })
+    end
+})
+
+-- TOMBOL DROP SEMUA TOOL NAMA SAMA
+MainTab:CreateButton({
+    Name = "Drop All Selected Tools",
     Callback = function()
         if not selectedTool then
             warn("Pilih Tool dulu di dropdown!")
@@ -887,13 +906,13 @@ MainTab:CreateButton({
 
                 task.wait(0.2)
                 hum:UnequipTools()
-                break
             end
         end
 
         hum:UnequipTools()
     end
 })
+
 
 
 --------------------------------------------------------------------
