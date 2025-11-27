@@ -1,27 +1,59 @@
---// Buat ScreenGUI
-local gui = Instance.new("ScreenGui")
-gui.Parent = game.CoreGui
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 
---// Buat TextLabel
-local label = Instance.new("TextLabel")
-label.Parent = gui
-label.Size = UDim2.new(0, 250, 0, 100)
-label.Position = UDim2.new(0, 10, 0, 10)
-label.BackgroundTransparency = 0.3
-label.TextScaled = true
-label.Font = Enum.Font.GothamBold
-label.TextColor3 = Color3.new(1, 1, 1)
-label.BackgroundColor3 = Color3.new(0, 0, 0)
-label.Text = "Loading..."
+local plr = Players.LocalPlayer
+local MonsterFolder = Workspace:WaitForChild("Monsters") -- ganti sesuai folder
 
---// Update koordinat secara real-time
-game:GetService("RunService").RenderStepped:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local pos = char.HumanoidRootPart.Position
-        label.Text = string.format(
-            "Koordinat Kamu:\nX: %.1f\nY: %.1f\nZ: %.1f",
-            pos.X, pos.Y, pos.Z
-        )
+local SpawnedNightMonsters = {}
+
+-- Fungsi cek apakah malam (misal: waktu Roblox di sky = jam 18-6)
+local function IsNight()
+    local Lighting = game:GetService("Lighting")
+    local hour = Lighting.ClockTime -- ClockTime: 0-24
+    return hour >= 18 or hour <= 6
+end
+
+local function RecordMonster(monster)
+    if not IsNight() then return end -- hanya malam hari
+
+    local prim = monster.PrimaryPart or monster:FindFirstChildWhichIsA("BasePart", true)
+    if prim then
+        SpawnedNightMonsters[monster.Name] = {
+            x = prim.Position.X,
+            y = prim.Position.Y,
+            z = prim.Position.Z,
+            time = tick()
+        }
+        print(("Monster %s spawned at night at %s"):format(monster.Name, tostring(prim.Position)))
     end
+end
+
+-- Catat monster yang sudah ada (hanya malam)
+for _, monster in ipairs(MonsterFolder:GetChildren()) do
+    RecordMonster(monster)
+end
+
+-- Catat monster baru saat spawn
+MonsterFolder.ChildAdded:Connect(function(monster)
+    RecordMonster(monster)
 end)
+
+-- Export ke JSON & simpan ke clipboard
+local function ExportToClipboard()
+    local jsonData = HttpService:JSONEncode(SpawnedNightMonsters)
+    if setclipboard then
+        setclipboard(jsonData)
+        print("Data monster malam berhasil disalin ke clipboard!")
+    else
+        print("Copy JSON ini manual:\n", jsonData)
+    end
+end
+
+-- Tombol GUI sederhana
+local ScreenGui = Instance.new("ScreenGui", plr:WaitForChild("PlayerGui"))
+local Button = Instance.new("TextButton", ScreenGui)
+Button.Size = UDim2.new(0,200,0,50)
+Button.Position = UDim2.new(0,50,0,50)
+Button.Text = "Export Monster Spawn Night"
+Button.MouseButton1Click:Connect(ExportToClipboard)
