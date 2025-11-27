@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN2",
+   Name = "DN3",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -531,6 +531,7 @@ TeleportTab:CreateButton({
     end
 })
 
+local PlayerSection = Tab:CreateSection("Player")
 -- Player teleport dropdown
 local selectedPlayer = nil
 local function GetPlayerList()
