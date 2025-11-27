@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 6",
+   Name = "DN bug fixed 7",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -64,6 +64,73 @@ UtilityTab:CreateButton({
         end)
     end,
 })
+
+--====================================================
+-- MONSTER NO DAMAGE (TOGGLE)
+--====================================================
+
+local godmodeConnection1 = nil
+local godmodeConnection2 = nil
+local godmodeEnabled = false
+
+UtilityTab:CreateToggle({
+    Name = "Monster No Damage",
+    CurrentValue = false,
+    Flag = "GodmodeToggle",
+    Callback = function(state)
+        godmodeEnabled = state
+
+        local hum = GetHum()
+        if not hum then
+            warn("Humanoid tidak ditemukan!")
+            return
+        end
+
+        -- MATIKAN fitur saat toggle OFF
+        if not state then
+            if godmodeConnection1 then godmodeConnection1:Disconnect() end
+            if godmodeConnection2 then godmodeConnection2:Disconnect() end
+            godmodeConnection1 = nil
+            godmodeConnection2 = nil
+
+            Rayfield:Notify({
+                Title = "Godmode",
+                Content = "Monster damage kembali normal.",
+                Duration = 2
+            })
+
+            return
+        end
+
+        -- === AKTIFKAN GODMODE ===
+        local maxHealth = hum.Health
+
+        godmodeConnection1 = hum.HealthChanged:Connect(function()
+            if not godmodeEnabled then return end
+            if hum.Health < maxHealth then
+                hum.Health = maxHealth
+            end
+        end)
+
+        godmodeConnection2 = hum.StateChanged:Connect(function(_, new)
+            if not godmodeEnabled then return end
+            if new == Enum.HumanoidStateType.FallingDown or
+               new == Enum.HumanoidStateType.Ragdoll or
+               new == Enum.HumanoidStateType.Physics or
+               new == Enum.HumanoidStateType.Knocked then
+
+                hum:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end)
+
+        Rayfield:Notify({
+            Title = "Godmode",
+            Content = "Kamu sekarang kebal dari monster hit.",
+            Duration = 2
+        })
+    end
+})
+
 
 UtilityTab:CreateButton({
     Name = "Fly GUI V3",
