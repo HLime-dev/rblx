@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN1",
+   Name = "DN2",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -112,7 +112,6 @@ MainTab:CreateButton({
     end
 })
 
--- ✅ FIXED: Drop satu-satu tool ke depan player, no kill, no parent change
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
@@ -121,29 +120,34 @@ MainTab:CreateButton({
         local hum = GetHum()
         if not char or not hrp or not hum then return end
 
+        local dropEvent = game:GetService("ReplicatedStorage"):WaitForChild("DropToolEvent", 2)
+        if not dropEvent or not dropEvent:IsA("RemoteEvent") then
+            warn("DropToolEvent not found!")
+            return
+        end
+
+        -- Loop setiap tool di Backpack
         for _, tool in ipairs(plr.Backpack:GetChildren()) do
             if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
-                -- Equip 1 tool
+                -- Equip tool
                 hum:EquipTool(tool)
-                task.wait(0.15)
+                task.wait(0.2)
 
-                -- Unequip semua biar grip lepas di server
-                hum:UnequipTools()
-                task.wait(0.05)
-
-                -- Pastikan handle tidak lagi nempel di tangan → taruh di depan player
+                -- Fire RemoteEvent ke server agar tool dianggap "dropped"
                 pcall(function()
-                    local handle = tool.Handle
-                    handle.Anchored = false
-                    handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -4) -- jatuhkan ke depan player
-                    handle.AssemblyLinearVelocity = Vector3.new(0, 6, 0) -- sentakan fisika biar dianggap dropped
+                    dropEvent:FireServer(tool) -- ✅ Ini yang sekarang digunakan untuk drop
                 end)
 
-                task.wait(0.25) -- delay per drop agar tidak tergenggam semua
+                task.wait(0.3)
+
+                -- Unequip untuk reset state grip di server
+                hum:UnequipTools()
+                task.wait(0.1)
             end
         end
 
-        hum:UnequipTools() -- Sapu bersih equip state
+        -- Pastikan state equip bersih
+        hum:UnequipTools()
     end
 })
 
