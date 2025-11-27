@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN8",
+   Name = "DN9",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -112,7 +112,7 @@ MainTab:CreateButton({
     end
 })
 
--- Drop All Food (REAL SINGLE DROP)
+-- Drop All Food (USE BUILT-IN DROP METHOD IF EXISTS)
 MainTab:CreateButton({
     Name = "Drop All Food",
     Callback = function()
@@ -121,28 +121,55 @@ MainTab:CreateButton({
         local hum = GetHum()
         if not char or not hrp or not hum then return end
 
+        local function triggerBuiltInDrop(tool)
+            -- Cari Button/Module/Remote/Function bernama "Drop" / "drop" / "Buang" / "Throw"
+            if tool:FindFirstChild("Drop") then
+                pcall(function() tool.Drop:Activate() end)
+                return true
+            end
+            for _, v in ipairs(tool:GetChildren()) do
+                if typeof(v) == "function" or typeof(v) == "table" then
+                    if v.Name and v.Name:lower() == "drop" then
+                        pcall(function() v:Activate() end)
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+
         for _, tool in ipairs(plr.Backpack:GetChildren()) do
-            if tool:IsA("Tool") then
+            if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
                 -- Equip dulu
                 hum:EquipTool(tool)
-                task.wait(0.2)
+                task.wait(0.18)
 
-                -- Paksa unequip dan lempar ke workspace (ground)
-                pcall(function()
-                    -- Lepas dari humanoid grip
-                    tool.Parent = workspace
+                local dropped = triggerBuiltInDrop(tool)
+
+                if not dropped then
+                    -- Fallback manual drop kalau tool tidak punya aksi drop bawaan
+                    pcall(function()
+                        tool.Parent = workspace
+                        tool.Handle.Anchored = false
+                        tool.Handle.AssemblyLinearVelocity = Vector3.new(0,2,0) -- dorong physics dikit
+                        tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
+                    end)
+                else
+                    -- Kalau berhasil drop bawaan, pastikan grip dilepas & kena physics
                     task.wait()
-
-                    -- Kalau punya Handle, jatuhkan ke depan player biar bisa ditake
-                    if tool:FindFirstChild("Handle") then
+                    pcall(function()
+                        tool.Parent = workspace
                         tool.Handle.Anchored = false
                         tool.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
-                    end
-                end)
+                    end)
+                end
 
-                task.wait(0.3) -- jeda per drop
+                task.wait(0.25) -- jeda antar item biar tidak ke-equip semua
             end
         end
+
+        -- Pastikan tidak ada tool yang masih nempel di tangan
+        char.Humanoid:UnequipTools()
     end
 })
 
