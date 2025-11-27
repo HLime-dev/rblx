@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN3",
+   Name = "DN5",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -270,17 +270,37 @@ MainTab:CreateButton({
         -----------------------------------------------------------
         -- Teleport to furniture (market-bound only)
         -----------------------------------------------------------
-        local function TeleportToFurnitureByName(name)
-            local hrp = GetHRP()
-            if not hrp then return end
-            local model = FindModelInMarketByName(name)
-            if model then
-                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-                if part then
-                    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+        -----------------------------------------------------------
+-- Teleport to furniture (market-bound only) lalu kembali
+-----------------------------------------------------------
+local function TeleportToFurnitureByName(name)
+    local hrp = GetHRP()
+    if not hrp then return end
+
+    -- Simpan posisi awal sebelum teleport
+    local originalCFrame = hrp.CFrame
+
+    local model = FindModelInMarketByName(name)
+    if model then
+        local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            -- Teleport ke furniture
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+
+            -- Tunggu 5 detik lalu kembali ke posisi awal
+            task.delay(5, function()
+                if hrp and originalCFrame then
+                    pcall(function()
+                        hrp.CFrame = originalCFrame
+                    end)
                 end
-            end
+            end)
         end
+    else
+        warn("Furniture berada di luar Market!")
+    end
+end
+
 
         -----------------------------------------------------------
         -- GUI Components
@@ -314,7 +334,7 @@ MainTab:CreateButton({
 })
 
 
--- Furniture GUI (CLEAN)
+-- Furniture Bunker GUI (CLEAN)
 MainTab:CreateButton({
     Name = "Open Bunker Furniture GUI",
     Callback = function()
