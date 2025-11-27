@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 4",
+   Name = "DN bug fixed 5",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -310,7 +310,7 @@ MainTab:CreateButton({
     local pos = part.Position
 
     -- REQUIREMENT: harus berada di atas Y = 6
-    if pos.Y < 6 then
+    if pos.Y < 5 then
         return false
     end
 
