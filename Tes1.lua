@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 13",
+   Name = "DN bug fixed 14",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -979,7 +979,10 @@ local teleportLocations = {
         local bunkerName = plr:GetAttribute("AssignedBunkerName")
 
         if hrp and bunkers and bunkerName and bunkers:FindFirstChild(bunkerName) then
-            hrp.CFrame = bunkers[bunkerName].SpawnLocation.CFrame
+            local spawn = bunkers[bunkerName]:FindFirstChild("SpawnLocation")
+            if spawn then
+                hrp.CFrame = spawn.CFrame
+            end
         end
     end,
 
@@ -989,13 +992,43 @@ local teleportLocations = {
             hrp.CFrame = CFrame.new(143, 5, -118)
         end
     end,
+
+    ["Pintu Kecil"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(147.8, 6, 152.3) end
+    end,
+
+    ["Palette 2"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(68.5, 6, 141.9) end
+    end,
+
+    ["Gudang"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(-177.9, 6, 42.3) end
+    end,
+
+    ["Palette 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(71.4, 6, -59.4) end
+    end,
+
+    ["Kolam 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(295.1, 32.1, 14.2) end
+    end,
+
+    ["Bundaran 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(412.1, 32.7, 152.8) end
+    end
 }
 
 local selectedTP = nil
 
 local teleportDropdown = TeleportTab:CreateDropdown({
     Name = "Select Teleport Location",
-    Options = {"My Bunker", "Market"},
+    Options = {"My Bunker", "Market", "Pintu Kecil", "Palette 2", "Gudang", "Palette 1", "Kolam 1", "Bundaran 1"},
     CurrentOption = nil,
     Callback = function(option)
         selectedTP = option   -- "option" = { "My Bunker" } (table)
@@ -1029,6 +1062,7 @@ TeleportTab:CreateButton({
         end
     end
 })
+
 
 
 
