@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 17",
+   Name = "DN bug fixed 18",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -343,8 +343,8 @@ MainTab:CreateButton({
 
         local MarketPoints = {
             Vector2.new(  68.7, -149.3 ),
-            Vector2.new( -160.4, -145.7 ),
-            Vector2.new( -166.9, 154.8  ),
+            Vector2.new( -266, -145.7 ),
+            Vector2.new( -266, 154.8  ),
             Vector2.new(  71.1, 158.7  )
         }
 
