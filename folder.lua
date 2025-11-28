@@ -72,5 +72,5 @@ for _, folder in ipairs(Workspace:GetChildren()) do
     end
 end
 
-statusLabel.Text = "🟢 Monster Logger ACTIVE (menunggu spawn Night)"
+statusLabel.Text = "🟢 Monster Logger ACTIVE1 (menunggu spawn Night)"
 print("✅ GUI & Logger siap! menunggu monster spawn...")
