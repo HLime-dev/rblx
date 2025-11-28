@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 18",
+   Name = "DN bug fixed 20",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -334,13 +334,20 @@ MainTab:CreateButton({
             return
         end
 
+        -----------------------------------------------------------
+        -- DEFINE SERVICES (FIXED)
+        -----------------------------------------------------------
+        local Workspace = game:GetService("Workspace")
+        local RS = game:GetService("ReplicatedStorage")
+        local Players = game:GetService("Players")
+
         local m = lib:Window("Furniture GUI")
         local selected = nil
+        local localPlr = Players.LocalPlayer
 
         -----------------------------------------------------------
-        -- FIXED MARKET BOUNDARY POLYGON
+        -- MARKET BOUNDARY POINTS (polygon fix)
         -----------------------------------------------------------
-
         local MarketPoints = {
             Vector2.new(  68.7, -149.3 ),
             Vector2.new( -266, -145.7 ),
@@ -351,7 +358,6 @@ MainTab:CreateButton({
         local function PointInPolygon(point, polygon)
             local inside = false
             local j = #polygon
-
             for i = 1, #polygon do
                 local xi, zi = polygon[i].X, polygon[i].Y
                 local xj, zj = polygon[j].X, polygon[j].Y
@@ -359,34 +365,25 @@ MainTab:CreateButton({
                 local intersect = ((zi > point.Y) ~= (zj > point.Y))
                   and (point.X < (xj - xi) * (point.Y - zi) / (zj - zi + 0.0001) + xi)
 
-                if intersect then
-                    inside = not inside
-                end
-
+                if intersect then inside = not inside end
                 j = i
             end
-
             return inside
         end
 
-       local function IsInsideMarket(part)
-    if not part then return false end
+        local function IsInsideMarket(part)
+            if not part then return false end
+            local pos = part.Position
 
-    local pos = part.Position
+            -- harus di atas Y tertentu
+            if pos.Y < 0 then return false end
 
-    -- REQUIREMENT: harus berada di atas Y = 6
-    if pos.Y < 0 then
-        return false
-    end
-
-    return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
-end
-
+            return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
+        end
 
         -----------------------------------------------------------
-        -- FIXED MARKET FOLDER DETECTION
+        -- DETECT MARKET FOLDER (FIXED lowercase workspace)
         -----------------------------------------------------------
-
         local function GetMarketFolder()
             local possible = {
                 "MarketWyposazenie", "MarketWypo", "Wyposazenie",
@@ -399,7 +396,6 @@ end
                 end
             end
 
-            -- fallback: cari folder yang mirip
             for _, v in ipairs(Workspace:GetChildren()) do
                 if v:IsA("Folder") and v.Name:match("Wypo") then
                     return v
@@ -409,11 +405,9 @@ end
             return nil
         end
 
-
         -----------------------------------------------------------
-        -- SCAN FURNITURE MARKET (FIXED)
+        -- SCAN FURNITURE LIST (FIXED)
         -----------------------------------------------------------
-
         local function ReturnFurnitureList()
             local market = GetMarketFolder()
             if not market then return {} end
@@ -425,12 +419,10 @@ end
                 for _, obj in ipairs(folder:GetChildren()) do
                     if obj:IsA("Model") then
                         local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-
                         if part and IsInsideMarket(part) and not seen[obj.Name] then
                             table.insert(list, obj.Name)
                             seen[obj.Name] = true
                         end
-
                     elseif obj:IsA("Folder") then
                         scan(obj)
                     end
@@ -442,33 +434,25 @@ end
             return list
         end
 
-
         -----------------------------------------------------------
-        -- FIND FURNITURE IN MARKET (FIXED)
+        -- FIND FURNITURE MODEL (FIXED recursive)
         -----------------------------------------------------------
-
         local function FindModelInMarketByName(name)
             local market = GetMarketFolder()
             if not market then return nil end
 
             local result = nil
-
             local function search(folder)
                 if result then return end
-
                 for _, obj in ipairs(folder:GetChildren()) do
                     if obj:IsA("Model") and obj.Name == name then
                         local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-
                         if part and IsInsideMarket(part) then
                             result = obj
                             return
                         end
                     end
-
-                    if obj:IsA("Folder") then
-                        search(obj)
-                    end
+                    if obj:IsA("Folder") then search(obj) end
                 end
             end
 
@@ -476,40 +460,43 @@ end
             return result
         end
 
-
         -----------------------------------------------------------
-        -- PICKUP FURNITURE IN MARKET (FIXED)
+        -- BRING FURNITURE (FIXED REAL bring)
         -----------------------------------------------------------
-
-        local function PickupFurnitureByName(name)
+        local function BringFurnitureToPlayer(name)
             local model = FindModelInMarketByName(name)
+            local char = localPlr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-            if model then
+            if model and hrp then
+                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+                if not part then return false end
+
+                -- pindahkan ke depan player
+                local targetCF = hrp.CFrame * CFrame.new(0, 0, -6)
+                model:SetPrimaryPartCFrame(targetCF)
+
+                -- tetap fire server (jika memang dibutuhkan)
                 pcall(function()
                     RS.PickupItemEvent:FireServer(model)
                 end)
+
                 return true
             end
-
             return false
         end
 
-
         -----------------------------------------------------------
-        -- TELEPORT TO FURNITURE (WITH RETURN)
+        -- TELEPORT (Tetap bekerja)
         -----------------------------------------------------------
-
         local function TeleportToFurnitureByName(name)
-            local hrp = GetHRP()
+            local char = localPlr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
 
             local original = hrp.CFrame
             local model = FindModelInMarketByName(name)
-
-            if not model then
-                warn("Furniture berada di luar boundary market!")
-                return
-            end
+            if not model then warn("Furniture berada di luar market!") return end
 
             local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
             if not part then return end
@@ -517,21 +504,14 @@ end
             hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
 
             task.delay(5, function()
-                if hrp then
-                    pcall(function()
-                        hrp.CFrame = original
-                    end)
-                end
+                if hrp then pcall(function() hrp.CFrame = original end) end
             end)
         end
 
-
         -----------------------------------------------------------
-        -- GUI UI COMPONENTS (DROPDOWN FIXED)
+        -- GUI COMPONENTS
         -----------------------------------------------------------
-
         local furnOptions = ReturnFurnitureList()
-
         local furnDropdown = m:Dropdown("Selected Furniture", furnOptions, function(option)
             selected = option
         end)
@@ -544,32 +524,21 @@ end
         end)
 
         m:Button("Bring Selected Furniture", function()
-            if not selected then
-                warn("Pilih furniture terlebih dahulu!")
-                return
-            end
-
-            if not PickupFurnitureByName(selected) then
-                warn("Tidak ditemukan atau di luar Market!")
-            end
+            if not selected then warn("Pilih furniture dulu!") return end
+            if not BringFurnitureToPlayer(selected) then warn("Tidak ditemukan / di luar Market!") end
         end)
 
         m:Button("Teleport to Furniture", function()
-            if not selected then
-                warn("Pilih furniture terlebih dahulu!")
-                return
-            end
-
+            if not selected then warn("Pilih furniture dulu!") return end
             TeleportToFurnitureByName(selected)
         end)
 
         m:Button("Close GUI", function()
-            pcall(function()
-                if m and m.Destroy then m:Destroy() end
-            end)
+            pcall(function() if m and m.Destroy then m:Destroy() end end)
         end)
     end
 })
+
 
 
 
