@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 19",
+   Name = "DN bug fixed 18",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -634,105 +634,82 @@ MainTab:CreateButton({
             return list
         end
 
-       -- GANTI fungsi FindModelInBunkerByName dengan yang ini:
-local function FindModelInBunkerByName(name)
-    local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie") or workspace:FindFirstChild("MarketWypos") or workspace:FindFirstChild("Wyposzenie")
-    local bunkerFolder = workspace:FindFirstChild("Bunkers")
-    if not wyposFolder or not bunkerFolder then return nil end
+        local function FindModelInBunkerByName(name)
+            local wyposFolder = workspace:FindFirstChild("Wyposazenie") or workspace:FindFirstChild("MarketWyposazenie")
+            local bunkerFolder = workspace:FindFirstChild("Bunkers")
+            if not wyposFolder or not bunkerFolder then return nil end
 
-    local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
-    if not bunkerModel then return nil end
-    local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
-    if not bunkerCF then return nil end
+            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+            if not bunkerModel then return nil end
+            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+            if not bunkerCF then return nil end
 
-    local function isInBunker(part)
-        if not part then return false end
-        local size = Vector3.new(50,50,50)
-        local minBound = bunkerCF.Position - size/2
-        local maxBound = bunkerCF.Position + size/2
-        local pos = part.Position
-        return (pos.X >= minBound.X and pos.X <= maxBound.X) and
-               (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
-               (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
-    end
+            local function isInBunker(part)
+                local size = Vector3.new(50,50,50)
+                local minBound = bunkerCF.Position - size/2
+                local maxBound = bunkerCF.Position + size/2
+                local pos = part.Position
+                return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+                       (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+                       (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+            end
 
-    local foundModel = nil
-    local foundPart = nil
-
-    local function scan(folder)
-        for _, child in ipairs(folder:GetChildren()) do
-            if child:IsA("Model") and child.Name == name then
-                local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
-                if part and isInBunker(part) then
-                    foundModel = child
-                    foundPart = part
-                    return
+            local found = nil
+            local function scan(folder)
+                for _, child in ipairs(folder:GetChildren()) do
+                    if child:IsA("Model") and child.Name == name then
+                        local part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true)
+                        if part and isInBunker(part) then
+                            found = child
+                            return
+                        end
+                    elseif child:IsA("Folder") then
+                        scan(child)
+                        if found then return end
+                    end
                 end
-            elseif child:IsA("Folder") then
-                scan(child)
-                if foundModel then return end
+            end
+
+            scan(wyposFolder)
+            return found
+        end
+
+        local function TeleportToFurniture(name)
+            local hrp = GetHRP()
+            if not hrp then return end
+            local model = FindModelInBunkerByName(name)
+            if model then
+                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    hrp.CFrame = part.CFrame + Vector3.new(0,5,0)
+                end
             end
         end
-    end
 
-    scan(wyposFolder)
-    if foundModel then
-        return { model = foundModel, part = foundPart }
-    end
-    return nil
-end
+        local ok2, _ = pcall(function()
+            local m = lib:Window("Bunker Furniture GUI")
 
--- GANTI tombol "Bring Selected Furniture" dengan yang ini:
-m:Button("Bring Selected Furniture", function()
-    if not selectedBunkerFurniture then
-        warn("Pilih furniture dulu!")
-        return
-    end
+            local dropdown = m:Dropdown("Select Furniture", ReturnBunkerFurnitureList(), function(option)
+                selectedBunkerFurniture = option
+            end)
 
-    local pickupEvent = RS:FindFirstChild("PickupItemEvent") or RS:FindFirstChild("PickupFurnitureEvent") or RS:FindFirstChild("PickupItem")
-    if not pickupEvent then
-        -- debug: jika nama event berubah di update
-        Rayfield:Notify({ Title = "Bring Furniture", Content = "PickupItemEvent tidak ditemukan di ReplicatedStorage.", Duration = 3 })
-        warn("PickupItemEvent tidak ditemukan pada ReplicatedStorage. Cek nama event setelah update.")
-        return
-    end
+            m:Button("Refresh Furniture List", function()
+                local newList = ReturnBunkerFurnitureList()
+                pcall(function() dropdown:UpdateOptions(newList) end)
+            end)
 
-    local info = FindModelInBunkerByName(selectedBunkerFurniture)
-    if not info or not info.model then
-        Rayfield:Notify({ Title = "Bring Furniture", Content = "Furniture tidak ditemukan di bunker.", Duration = 2 })
-        warn("FindModelInBunkerByName gagal menemukan model:", selectedBunkerFurniture)
-        return
-    end
-
-    local success = false
-    -- coba kirim part (jika ada)
-    if info.part then
-        local ok, err = pcall(function() pickupEvent:FireServer(info.part) end)
-        if ok then success = true end
-        if not ok then warn("Pickup with part failed:", err) end
-    end
-
-    -- jika gagal, coba kirim PrimaryPart reference (jika berbeda)
-    if not success and info.model and info.model.PrimaryPart then
-        local ok2, err2 = pcall(function() pickupEvent:FireServer(info.model.PrimaryPart) end)
-        if ok2 then success = true end
-        if not ok2 then warn("Pickup with model.PrimaryPart failed:", err2) end
-    end
-
-    -- terakhir, coba kirim model langsung (sebagian server menerima model)
-    if not success then
-        local ok3, err3 = pcall(function() pickupEvent:FireServer(info.model) end)
-        if ok3 then success = true end
-        if not ok3 then warn("Pickup with model failed:", err3) end
-    end
-
-    if success then
-        Rayfield:Notify({ Title = "Bring Furniture", Content = "Permintaan pickup terkirim: ".. tostring(selectedBunkerFurniture), Duration = 2 })
-    else
-        Rayfield:Notify({ Title = "Bring Furniture", Content = "Gagal pickup. Cek console untuk error.", Duration = 3 })
-    end
-end)
-
+            m:Button("Bring Selected Furniture", function()
+                if selectedBunkerFurniture then
+                    local model = FindModelInBunkerByName(selectedBunkerFurniture)
+                    if model then
+                        pcall(function() RS.PickupItemEvent:FireServer(model) end)
+                    else
+                        warn("Furniture tidak ada di bunker!")
+                    end
+                else
+                    warn("Pilih furniture dulu!")
+                end
+            end)
 
             m:Button("Teleport to Selected Furniture", function()
     if not selectedBunkerFurniture then
