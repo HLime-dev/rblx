@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 28",
+   Name = "DN bug fixed 29",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1656,7 +1656,7 @@ local function RunCollect(name)
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
                 task.wait(0.15)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
-                task.wait(0.05)
+                task.wait(0.15)
             end
         end
 
@@ -1666,7 +1666,7 @@ local function RunCollect(name)
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
                 task.wait(0.15)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
-                task.wait(0.05)
+                task.wait(0.15)
             end
         end
 
@@ -1677,7 +1677,7 @@ local function RunCollect(name)
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
                 task.wait(0.15)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
-                task.wait(0.05)
+                task.wait(0.15)
             end
         end
     end
