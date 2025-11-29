@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 27",
+   Name = "DN bug fixed 28",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1467,7 +1467,7 @@ TestingTab:CreateButton({
 
             -- 1. Teleport ke furniture (agar masuk jarak server)
             hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
-            task.wait(0.25)
+            task.wait(0.5)
 
             -- 2. Jalankan event pickup
             pcall(function()
@@ -1475,7 +1475,7 @@ TestingTab:CreateButton({
             end)
 
             -- 3. Teleport kembali ke posisi semula
-            task.wait(0.25)
+            task.wait(0.5)
             local newHrp = GetHRP()
             if newHrp then
                 pcall(function()
@@ -1555,6 +1555,249 @@ TestingTab:CreateButton({
                 if m and m.Destroy then m:Destroy() end
             end)
         end)
+    end
+})
+
+--------------------------------------------------------------------
+--==================== FOOD GUI (SIMPLIFIED + TOGGLE LOOP) ==========
+--------------------------------------------------------------------
+
+local FoodSection = TestingTab:CreateSection("Food")
+
+local modes = {
+    "Collect All Food (Skip Bunker)",
+    "Collect All Food in Bunker",
+    "Collect Food/Tool by Name"
+}
+
+local selected = nil
+local collectMode = modes[1]
+
+-----------------------------------------------------------
+-- LIST TOOL DI MAP (MODE BY NAME)
+-----------------------------------------------------------
+local function ListMapFoodOrTools()
+    local list, seen = {}, {}
+    for _, t in ipairs(workspace:GetDescendants()) do
+        if t:IsA("Tool") and t:FindFirstChild("Handle") and t.Handle:FindFirstChildOfClass("ProximityPrompt") then
+            if not seen[t.Name] then
+                seen[t.Name] = true
+                table.insert(list, t.Name)
+            end
+        end
+    end
+    table.sort(list)
+    return list
+end
+
+-----------------------------------------------------------
+-- DETEKSI FOOD ADA DI DALAM SALAH SATU BUNKER? (untuk skip)
+-----------------------------------------------------------
+local function BunkerData()
+    local centers = {}
+    local folder = workspace:FindFirstChild("Bunkers")
+    if folder then
+        for _, b in ipairs(folder:GetChildren()) do
+            local big, max = nil, 0
+            for _, p in ipairs(b:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    if p.Size.Magnitude > max then max = p.Size.Magnitude; big = p end
+                end
+            end
+            if big then
+                table.insert(centers, {pos = big.Position, r = (big.Size.Magnitude/2)+20})
+            end
+        end
+    end
+    return centers
+end
+
+local bunkerCenters = BunkerData()
+local function InAnyBunker(part)
+    if not part then return false end
+    for _, b in ipairs(bunkerCenters) do
+        if (part.Position - b.pos).Magnitude <= b.r then
+            return true
+        end
+    end
+    return false
+end
+
+-----------------------------------------------------------
+-- BOUNDARY BUNKER MU (dipakai khusus mode bunker)
+-----------------------------------------------------------
+local function IsInsideMyBunker(part)
+    if not part then return false end
+    local folder = workspace:FindFirstChild("Bunkers")
+    if not folder then return false end
+    local b = folder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    if not b then return false end
+    local c = b:FindFirstChild("PrimaryPart") or b:FindFirstChildWhichIsA("BasePart")
+    if not c then return false end
+
+    local size = Vector3.new(50,50,50)
+    local min = c.Position - size/2
+    local max = c.Position + size/2
+    local p = part.Position
+    return p.X>=min.X and p.X<=max.X and p.Y>=min.Y and p.Y<=max.Y and p.Z>=min.Z and p.Z<=max.Z
+end
+
+-----------------------------------------------------------
+-- PROSES COLLECT SESUAI MODE
+-----------------------------------------------------------
+local function RunCollect(name)
+    local hrp = GetHRP()
+    if not hrp then return end
+
+    if collectMode == modes[1] then
+        for _, t in ipairs(workspace:GetDescendants()) do
+            if t:IsA("Tool") then
+                if InAnyBunker(t.Handle) then continue end
+                hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
+                task.wait(0.15)
+                pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
+                task.wait(0.05)
+            end
+        end
+
+    elseif collectMode == modes[2] then
+        for _, t in ipairs(workspace:GetDescendants()) do
+            if t:IsA("Tool") and IsInsideMyBunker(t.Handle) then
+                hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
+                task.wait(0.15)
+                pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
+                task.wait(0.05)
+            end
+        end
+
+    elseif collectMode == modes[3] and name then
+        for _, t in ipairs(workspace:GetDescendants()) do
+            if t:IsA("Tool") and t.Name == name and not InAnyBunker(t.Handle) then
+                if collectMode == modes[2] and not IsInsideMyBunker(t.Handle) then continue end
+                hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
+                task.wait(0.15)
+                pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
+                task.wait(0.05)
+            end
+        end
+    end
+end
+
+-----------------------------------------------------------
+-- PROSES DROP SESUAI MODE
+-----------------------------------------------------------
+local function RunDrop(name)
+    local hum = GetHum()
+    local ev = RS:FindFirstChild("DropToolEvent")
+    if not hum or not ev then return end
+
+    if not name then
+        for _, t in ipairs(plr.Backpack:GetChildren()) do
+            if t:IsA("Tool") then
+                hum:EquipTool(t); task.wait(0.15)
+                pcall(function() ev:FireServer(t) end)
+                task.wait(0.2); hum:UnequipTools()
+            end
+        end
+        hum:UnequipTools()
+    else
+        for _, t in ipairs(plr.Backpack:GetChildren()) do
+            if t:IsA("Tool") and t.Name == name then
+                hum:EquipTool(t); task.wait(0.15)
+                pcall(function() ev:FireServer(t) end)
+                task.wait(0.2); hum:UnequipTools()
+            end
+        end
+    end
+end
+
+-----------------------------------------------------------
+-- DROP DOWN UI (COLLECT MODE)
+-----------------------------------------------------------
+local collectDropdown = TestingTab:CreateDropdown({
+    Name = "Food Collect Mode",
+    Options = modes,
+    CurrentOption = modes[1],
+    MultipleOptions = false,
+    Callback = function(opt)
+        collectMode = opt[1]
+        selected = nil
+    end
+})
+
+-----------------------------------------------------------
+-- DROP DOWN KEDUA (LIST BY NAME)
+-----------------------------------------------------------
+local nameDropdown = TestingTab:CreateDropdown({
+    Name = "Select Food/Tool Name",
+    Options = ListMapFoodOrTools(),
+    CurrentOption = {},
+    MultipleOptions = false,
+    Callback = function(opt)
+        selected = opt[1]
+    end
+})
+
+TestingTab:CreateButton({
+    Name = "Refresh Food/Tool List",
+    Callback = function()
+        nameDropdown:Refresh({ Options = ListMapFoodOrTools(), CurrentOption = {} })
+    end
+})
+
+-----------------------------------------------------------
+-- TOGGLE COLLECT LOOP
+-----------------------------------------------------------
+local collecting = false
+local foodLoop = nil
+local originalCF = nil
+
+foodLoop = TestingTab:CreateToggle({
+    Name = "Auto Collect Food",
+    CurrentValue = false,
+    Callback = function(state)
+        local hrp = GetHRP()
+        if not hrp then return end
+
+        collecting = state
+
+        if state then
+            originalCF = hrp.CFrame
+            task.spawn(function()
+                while collecting do
+                    if collectMode == modes[3] then
+                        RunCollect(selected)
+                    else
+                        RunCollect()
+                    end
+                    task.wait(0.3)
+                end
+            end)
+        else
+            local nh = GetHRP()
+            if nh and originalCF then
+                pcall(function() nh.CFrame = originalCF end)
+            end
+        end
+    end
+})
+
+-----------------------------------------------------------
+-- BUTTON DROP (SAMA STYLE DENGAN CONTOH)
+-----------------------------------------------------------
+
+TestingTab:CreateButton({
+    Name = "Drop All Food/Tools",
+    Callback = function()
+        RunDrop()
+    end
+})
+
+TestingTab:CreateButton({
+    Name = "Drop Selected Food/Tool",
+    Callback = function()
+        if not selected then return warn("Pilih dulu di dropdown!") end
+        RunDrop(selected)
     end
 })
 
