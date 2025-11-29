@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 23",
+   Name = "DN bug fixed 24",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -720,7 +720,7 @@ local function BringAndPickupBunkerFurniture(name)
     end
 
     -- 1. Teleport mendekat ke furniture
-    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+    hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
     task.wait(0.25)
 
     -- 2. Fire pickup event ke server
@@ -728,7 +728,7 @@ local function BringAndPickupBunkerFurniture(name)
         RS.PickupItemEvent:FireServer(model)
     end)
 
-    -- 3. Optional: Set physics agar interactable di client setelah pickup
+    -- 3. Set physics client-side agar bisa diatur bila perlu
     for _, p in model:GetDescendants() do
         if p:IsA("BasePart") then
             p:SetNetworkOwner(plr)
@@ -737,12 +737,13 @@ local function BringAndPickupBunkerFurniture(name)
         end
     end
 
-    -- 4. Kembali ke posisi semula
+    -- 4. Restore posisi awal
     task.wait(0.25)
     hrp.CFrame = originalCF
 
     return true
 end
+
 
         local function TeleportToFurniture(name)
             local hrp = GetHRP()
