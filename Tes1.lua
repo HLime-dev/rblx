@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 30",
+   Name = "DN bug fixed 31",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1654,7 +1654,7 @@ local function RunCollect(name)
             if t:IsA("Tool") then
                 if InAnyBunker(t.Handle) then continue end
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
-                task.wait(0.25)
+                task.wait(1)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
                 task.wait(0.15)
             end
@@ -1664,7 +1664,7 @@ local function RunCollect(name)
         for _, t in ipairs(workspace:GetDescendants()) do
             if t:IsA("Tool") and IsInsideMyBunker(t.Handle) then
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
-                task.wait(0.25)
+                task.wait(1)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
                 task.wait(0.15)
             end
@@ -1675,7 +1675,7 @@ local function RunCollect(name)
             if t:IsA("Tool") and t.Name == name and not InAnyBunker(t.Handle) then
                 if collectMode == modes[2] and not IsInsideMyBunker(t.Handle) then continue end
                 hrp.CFrame = t.Handle.CFrame + Vector3.new(0,4,0)
-                task.wait(0.25)
+                task.wait(1)
                 pcall(function() fireproximityprompt(t.Handle.ProximityPrompt) end)
                 task.wait(0.15)
             end
