@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 18",
+   Name = "DN bug fixed 22",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -481,18 +481,44 @@ end
         -- PICKUP FURNITURE IN MARKET (FIXED)
         -----------------------------------------------------------
 
-        local function PickupFurnitureByName(name)
-            local model = FindModelInMarketByName(name)
+        -----------------------------------------------------------
+-- IMPROVED PICKUP FURNITURE IN MARKET (TELEPORT SAFE)
+-----------------------------------------------------------
 
-            if model then
-                pcall(function()
-                    RS.PickupItemEvent:FireServer(model)
-                end)
-                return true
-            end
+local function BringAndPickupFurniture(name)
+    local hrp = GetHRP()
+    if not hrp then 
+        return warn("HRP tidak ditemukan!")
+    end
 
-            return false
-        end
+    local originalCF = hrp.CFrame
+    local model = FindModelInMarketByName(name)
+
+    if not model then
+        return warn("Furniture tidak ditemukan atau di luar Market!")
+    end
+
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if not part then
+        return warn("Part furniture tidak ditemukan!")
+    end
+
+    -- 1. Teleport ke furniture (agar masuk jarak server)
+    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+    task.wait(0.25)
+
+    -- 2. Jalankan event pickup
+    pcall(function()
+        RS.PickupItemEvent:FireServer(model)
+    end)
+
+    -- 3. Kembali ke posisi semula
+    task.wait(0.25)
+    hrp.CFrame = originalCF
+
+    return true
+end
+
 
 
         -----------------------------------------------------------
@@ -543,16 +569,14 @@ end
             end)
         end)
 
-        m:Button("Bring Selected Furniture", function()
-            if not selected then
-                warn("Pilih furniture terlebih dahulu!")
-                return
-            end
+       m:Button("Bring Selected Furniture", function()
+    if not selected then
+        return warn("Pilih furniture terlebih dahulu!")
+    end
 
-            if not PickupFurnitureByName(selected) then
-                warn("Tidak ditemukan atau di luar Market!")
-            end
-        end)
+    BringAndPickupFurniture(selected)
+end)
+
 
         m:Button("Teleport to Furniture", function()
             if not selected then
