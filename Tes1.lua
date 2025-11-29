@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 24",
+   Name = "DN bug fixed 25",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -708,41 +708,47 @@ local function BringAndPickupBunkerFurniture(name)
     end
 
     local originalCF = hrp.CFrame
-    local model = FindModelInBunkerByName(name)
 
+    local model = FindModelInBunkerByName(name)
     if not model then
         return warn("Furniture tidak ditemukan di Bunker!")
     end
 
     local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
     if not part then
-        return warn("Part furniture tidak ditemukan!")
+        return warn("PrimaryPart/part di dalam furniture tidak ditemukan!")
     end
 
-    -- 1. Teleport mendekat ke furniture
+    -- 1. Teleport ke part furniture agar masuk jarak pickup server
     hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
-    task.wait(0.25)
+    task.wait(0.3)
 
-    -- 2. Fire pickup event ke server
+    -- 2. Tembakkan event pickup ke server
     pcall(function()
         RS.PickupItemEvent:FireServer(model)
     end)
 
-    -- 3. Set physics client-side agar bisa diatur bila perlu
+    -- 3. Set physics agar interactable di client (opsional)
     for _, p in model:GetDescendants() do
         if p:IsA("BasePart") then
-            p:SetNetworkOwner(plr)
-            p.CanCollide = true
             p.Anchored = false
+            p.CanCollide = true
+            p:SetNetworkOwner(plr)
         end
     end
 
-    -- 4. Restore posisi awal
-    task.wait(0.25)
-    hrp.CFrame = originalCF
+    -- 4. IMPORTANT: reacquire HRP dulu karena mungkin diganti server
+    task.wait(0.3)
+    local newHrp = GetHRP()
+    if newHrp then
+        pcall(function()
+            newHrp.CFrame = originalCF
+        end)
+    end
 
     return true
 end
+
 
 
         local function TeleportToFurniture(name)
@@ -769,13 +775,13 @@ end
                 pcall(function() dropdown:UpdateOptions(newList) end)
             end)
 
-            m:Button("Bring Selected Furniture", function()
+           m:Button("Bring Selected Furniture", function()
     if not selectedBunkerFurniture then
         return warn("Pilih furniture dulu!")
     end
-
     BringAndPickupBunkerFurniture(selectedBunkerFurniture)
 end)
+
 
 
             m:Button("Teleport to Selected Furniture", function()
