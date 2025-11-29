@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 22",
+   Name = "DN bug fixed 23",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -698,6 +698,52 @@ MainTab:CreateButton({
             return found
         end
 
+         -----------------------------------------------------------
+-- IMPROVED BUNKER PICKUP (TELEPORT SAFE) ✅
+-----------------------------------------------------------
+local function BringAndPickupBunkerFurniture(name)
+    local hrp = GetHRP()
+    if not hrp then
+        return warn("HRP tidak ditemukan!")
+    end
+
+    local originalCF = hrp.CFrame
+    local model = FindModelInBunkerByName(name)
+
+    if not model then
+        return warn("Furniture tidak ditemukan di Bunker!")
+    end
+
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if not part then
+        return warn("Part furniture tidak ditemukan!")
+    end
+
+    -- 1. Teleport mendekat ke furniture
+    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+    task.wait(0.25)
+
+    -- 2. Fire pickup event ke server
+    pcall(function()
+        RS.PickupItemEvent:FireServer(model)
+    end)
+
+    -- 3. Optional: Set physics agar interactable di client setelah pickup
+    for _, p in model:GetDescendants() do
+        if p:IsA("BasePart") then
+            p:SetNetworkOwner(plr)
+            p.CanCollide = true
+            p.Anchored = false
+        end
+    end
+
+    -- 4. Kembali ke posisi semula
+    task.wait(0.25)
+    hrp.CFrame = originalCF
+
+    return true
+end
+
         local function TeleportToFurniture(name)
             local hrp = GetHRP()
             if not hrp then return end
@@ -723,17 +769,13 @@ MainTab:CreateButton({
             end)
 
             m:Button("Bring Selected Furniture", function()
-                if selectedBunkerFurniture then
-                    local model = FindModelInBunkerByName(selectedBunkerFurniture)
-                    if model then
-                        pcall(function() RS.PickupItemEvent:FireServer(model) end)
-                    else
-                        warn("Furniture tidak ada di bunker!")
-                    end
-                else
-                    warn("Pilih furniture dulu!")
-                end
-            end)
+    if not selectedBunkerFurniture then
+        return warn("Pilih furniture dulu!")
+    end
+
+    BringAndPickupBunkerFurniture(selectedBunkerFurniture)
+end)
+
 
             m:Button("Teleport to Selected Furniture", function()
     if not selectedBunkerFurniture then
