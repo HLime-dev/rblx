@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 25",
+   Name = "DN bug fixed 26",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -738,16 +738,16 @@ local function BringAndPickupBunkerFurniture(name)
     end
 
     -- 4. IMPORTANT: reacquire HRP dulu karena mungkin diganti server
-    task.wait(0.3)
-    local newHrp = GetHRP()
-    if newHrp then
+   -- Restore posisi dengan reacquire HRP (tanpa langsung return)
+task.delay(1.2, function()
+    local h = GetHRP()
+    if h then
         pcall(function()
-            newHrp.CFrame = originalCF
+            h.CFrame = originalCF
         end)
     end
+end)
 
-    return true
-end
 
 
 
@@ -775,12 +775,25 @@ end
                 pcall(function() dropdown:UpdateOptions(newList) end)
             end)
 
-           m:Button("Bring Selected Furniture", function()
+          m:Button("Bring Selected Furniture", function()
     if not selectedBunkerFurniture then
         return warn("Pilih furniture dulu!")
     end
+
+    local saveCF = GetHRP().CFrame -- Simpan posisi awal
     BringAndPickupBunkerFurniture(selectedBunkerFurniture)
+
+    -- Restore harus pakai delay karena server me-lock posisi karakter sesaat
+    task.delay(1.5, function()
+        local hrp = GetHRP() -- Ambil ulang HRP terbaru
+        if hrp then
+            pcall(function()
+                hrp.CFrame = saveCF
+            end)
+        end
+    end)
 end)
+
 
 
 
