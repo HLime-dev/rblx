@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 25",
+   Name = "DN bug fixed 26",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -313,6 +313,170 @@ MainTab:CreateButton({
         -- kembalikan ke posisi awal
         task.wait(0.1)
         pcall(function() hrp.CFrame = originalCFrame end)
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Collect All Food (Skip Bunkers)",
+    Callback = function()
+
+        local hrp = GetHRP()
+        if not hrp then return end
+
+        local lastPos = hrp.CFrame
+
+        local bunkersFolder = workspace:FindFirstChild("Bunkers")
+        local bunkerCenters = {}
+
+        ----------------------------------------------------
+        -- 1. Ambil data semua bunker
+        ----------------------------------------------------
+        if bunkersFolder then
+            for _, bunker in ipairs(bunkersFolder:GetChildren()) do
+                
+                -- cari primarypart atau part terbesar
+                local biggestPart = nil
+                local maxSize = 0
+
+                for _, obj in ipairs(bunker:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local mag = obj.Size.Magnitude
+                        if mag > maxSize then
+                            maxSize = mag
+                            biggestPart = obj
+                        end
+                    end
+                end
+
+                if biggestPart then
+                    table.insert(bunkerCenters, {
+                        pos = biggestPart.Position,
+                        radius = (biggestPart.Size.Magnitude / 2) + 20 -- radius aman
+                    })
+                end
+            end
+        end
+
+        ----------------------------------------------------
+        -- 2. Cek apakah part berada di dalam salah satu bunker
+        ----------------------------------------------------
+        local function IsInsideAnyBunker(part)
+            if not part then return false end
+
+            for _, bunker in ipairs(bunkerCenters) do
+                if (part.Position - bunker.pos).Magnitude <= bunker.radius then
+                    return true
+                end
+            end
+
+            return false
+        end
+
+        ----------------------------------------------------
+        -- 3. Scan & collect food di map (skip dalam bunker)
+        ----------------------------------------------------
+        for _, tool in ipairs(Workspace:GetDescendants()) do
+            if tool:IsA("Tool") then
+
+                local handle = tool:FindFirstChild("Handle")
+                local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
+
+                if handle and prompt then
+                    
+                    -- SKIP JIKA FOOD BERADA DI DALAM BUNKER
+                    if IsInsideAnyBunker(handle) then
+                        continue
+                    end
+
+                    -- COLLECT FOOD DI LUAR BUNKER
+                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                    task.wait(0.15)
+                    pcall(function() fireproximityprompt(prompt) end)
+                    task.wait(0.05)
+                end
+            end
+        end
+
+        task.wait(0.1)
+        pcall(function()
+            hrp.CFrame = lastPos
+        end)
+    end
+})
+
+--------------
+--=== DROP SAME NAME TOOLS + REFRESH ===--
+
+local selectedTool = nil
+
+-- FUNCTION UNTUK AMBIL DAFTAR TOOL DI BACKPACK
+local function getToolNameList()
+    local list = {}
+    local unique = {}
+    for _, tool in ipairs(plr.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and not unique[tool.Name] then
+            unique[tool.Name] = true
+            table.insert(list, tool.Name)
+        end
+    end
+    return list
+end
+
+-- BUAT DROPDOWN AWAL
+local toolDropdown = MainTab:CreateDropdown({
+    Name = "Select Tool to Drop",
+    Options = getToolNameList(),
+    CurrentOption = {},
+    MultipleOptions = false,
+    Callback = function(opt)
+        selectedTool = opt[1]
+    end,
+})
+
+-- TOMBOL REFRESH DROPDOWN
+MainTab:CreateButton({
+    Name = "Refresh Tool List",
+    Callback = function()
+        selectedTool = nil
+        -- Update isi dropdown dengan daftar terbaru
+        toolDropdown:Refresh({
+            Options = getToolNameList(),
+            CurrentOption = {},
+        })
+    end
+})
+
+-- TOMBOL DROP SEMUA TOOL NAMA SAMA
+MainTab:CreateButton({
+    Name = "Drop All Selected Tools",
+    Callback = function()
+        if not selectedTool then
+            warn("Pilih Tool dulu di dropdown!")
+            return
+        end
+
+        local hum = GetHum()
+        local dropEvent = RS:FindFirstChild("DropToolEvent")
+        if not dropEvent then
+            warn("DropToolEvent tidak ditemukan")
+            return
+        end
+
+        for _, tool in ipairs(plr.Backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == selectedTool and tool:FindFirstChild("Handle") then
+                hum:EquipTool(tool)
+                task.wait(0.15)
+
+                pcall(function()
+                    dropEvent:FireServer(tool)
+                end)
+
+                task.wait(0.2)
+                hum:UnequipTools()
+            end
+        end
+
+        hum:UnequipTools()
     end
 })
 
@@ -821,170 +985,7 @@ end)
     end
 })
 
-------tes----------
-MainTab:CreateButton({
-    Name = "Collect All Food (Skip Bunkers)",
-    Callback = function()
-
-        local hrp = GetHRP()
-        if not hrp then return end
-
-        local lastPos = hrp.CFrame
-
-        local bunkersFolder = workspace:FindFirstChild("Bunkers")
-        local bunkerCenters = {}
-
-        ----------------------------------------------------
-        -- 1. Ambil data semua bunker
-        ----------------------------------------------------
-        if bunkersFolder then
-            for _, bunker in ipairs(bunkersFolder:GetChildren()) do
-                
-                -- cari primarypart atau part terbesar
-                local biggestPart = nil
-                local maxSize = 0
-
-                for _, obj in ipairs(bunker:GetDescendants()) do
-                    if obj:IsA("BasePart") then
-                        local mag = obj.Size.Magnitude
-                        if mag > maxSize then
-                            maxSize = mag
-                            biggestPart = obj
-                        end
-                    end
-                end
-
-                if biggestPart then
-                    table.insert(bunkerCenters, {
-                        pos = biggestPart.Position,
-                        radius = (biggestPart.Size.Magnitude / 2) + 20 -- radius aman
-                    })
-                end
-            end
-        end
-
-        ----------------------------------------------------
-        -- 2. Cek apakah part berada di dalam salah satu bunker
-        ----------------------------------------------------
-        local function IsInsideAnyBunker(part)
-            if not part then return false end
-
-            for _, bunker in ipairs(bunkerCenters) do
-                if (part.Position - bunker.pos).Magnitude <= bunker.radius then
-                    return true
-                end
-            end
-
-            return false
-        end
-
-        ----------------------------------------------------
-        -- 3. Scan & collect food di map (skip dalam bunker)
-        ----------------------------------------------------
-        for _, tool in ipairs(Workspace:GetDescendants()) do
-            if tool:IsA("Tool") then
-
-                local handle = tool:FindFirstChild("Handle")
-                local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
-
-                if handle and prompt then
-                    
-                    -- SKIP JIKA FOOD BERADA DI DALAM BUNKER
-                    if IsInsideAnyBunker(handle) then
-                        continue
-                    end
-
-                    -- COLLECT FOOD DI LUAR BUNKER
-                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
-                    task.wait(0.15)
-                    pcall(function() fireproximityprompt(prompt) end)
-                    task.wait(0.05)
-                end
-            end
-        end
-
-        task.wait(0.1)
-        pcall(function()
-            hrp.CFrame = lastPos
-        end)
-    end
-})
-
---------------
---=== DROP SAME NAME TOOLS + REFRESH ===--
-
-local selectedTool = nil
-
--- FUNCTION UNTUK AMBIL DAFTAR TOOL DI BACKPACK
-local function getToolNameList()
-    local list = {}
-    local unique = {}
-    for _, tool in ipairs(plr.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and not unique[tool.Name] then
-            unique[tool.Name] = true
-            table.insert(list, tool.Name)
-        end
-    end
-    return list
-end
-
--- BUAT DROPDOWN AWAL
-local toolDropdown = MainTab:CreateDropdown({
-    Name = "Select Tool to Drop",
-    Options = getToolNameList(),
-    CurrentOption = {},
-    MultipleOptions = false,
-    Callback = function(opt)
-        selectedTool = opt[1]
-    end,
-})
-
--- TOMBOL REFRESH DROPDOWN
-MainTab:CreateButton({
-    Name = "Refresh Tool List",
-    Callback = function()
-        selectedTool = nil
-        -- Update isi dropdown dengan daftar terbaru
-        toolDropdown:Refresh({
-            Options = getToolNameList(),
-            CurrentOption = {},
-        })
-    end
-})
-
--- TOMBOL DROP SEMUA TOOL NAMA SAMA
-MainTab:CreateButton({
-    Name = "Drop All Selected Tools",
-    Callback = function()
-        if not selectedTool then
-            warn("Pilih Tool dulu di dropdown!")
-            return
-        end
-
-        local hum = GetHum()
-        local dropEvent = RS:FindFirstChild("DropToolEvent")
-        if not dropEvent then
-            warn("DropToolEvent tidak ditemukan")
-            return
-        end
-
-        for _, tool in ipairs(plr.Backpack:GetChildren()) do
-            if tool:IsA("Tool") and tool.Name == selectedTool and tool:FindFirstChild("Handle") then
-                hum:EquipTool(tool)
-                task.wait(0.15)
-
-                pcall(function()
-                    dropEvent:FireServer(tool)
-                end)
-
-                task.wait(0.2)
-                hum:UnequipTools()
-            end
-        end
-
-        hum:UnequipTools()
-    end
-})
+------tes---------
 
 
 
@@ -1305,3 +1306,255 @@ SettingsTab:CreateButton({
         end)
     end
 })
+
+-----------------------------------------------------------------------
+------------------------Tes Tab----------------------------------------
+
+local TestingTab = Window:CreateTab("Testing", 4483362458)
+
+--------------------------------------------------------------------
+--==================== BUNKER FURNITURE GUI (FIXED) =================
+--------------------------------------------------------------------
+
+local FurnitureSection = Testing:CreateSection("Furniture Bunker")
+
+Testing:CreateButton({
+    Name = "Open Bunker Furniture GUI",
+    Callback = function()
+        -----------------------------------------------------------
+        -- Load Turtle-Lib
+        -----------------------------------------------------------
+        local ok, lib = pcall(function()
+            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Turtle-Brand/Turtle-Lib/main/source.lua"))()
+        end)
+
+        if not ok or not lib then
+            warn("Gagal load Turtle-Lib")
+            return
+        end
+
+        local selected = nil
+
+        -----------------------------------------------------------
+        -- BOUNDARY BUNKER (tidak diubah sesuai permintaanmu)
+        -----------------------------------------------------------
+        local function IsInsideBunker(part)
+            if not part then return false end
+
+            local pos = part.Position
+            local bunkerFolder = workspace:FindFirstChild("Bunkers")
+            if not bunkerFolder then return false end
+
+            local bunkerModel = bunkerFolder:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+            if not bunkerModel then return false end
+
+            local bunkerCF = bunkerModel:FindFirstChild("PrimaryPart") or bunkerModel:FindFirstChildWhichIsA("BasePart")
+            if not bunkerCF then return false end
+
+            -- BOUNDARY tetap pakai yang kamu buat
+            local size = Vector3.new(50,50,50)
+            local minBound = bunkerCF.Position - size/2
+            local maxBound = bunkerCF.Position + size/2
+
+            return (pos.X >= minBound.X and pos.X <= maxBound.X) and
+                   (pos.Y >= minBound.Y and pos.Y <= maxBound.Y) and
+                   (pos.Z >= minBound.Z and pos.Z <= maxBound.Z)
+        end
+
+        -----------------------------------------------------------
+        -- Get Wyposazenie Folder (mirip seperti contohmu)
+        -----------------------------------------------------------
+        local function GetWyposFolder()
+            local possible = {
+                "Wyposazenie", "MarketWyposazenie", "MarketWypo", "Wypo"
+            }
+
+            for _, name in ipairs(possible) do
+                if workspace:FindFirstChild(name) then
+                    return workspace[name]
+                end
+            end
+
+            for _, v in workspace:GetChildren() do
+                if v:IsA("Folder") and v.Name:match("Wypo") then
+                    return v
+                end
+            end
+
+            return nil
+        end
+
+        -----------------------------------------------------------
+        -- Scan Furniture di Bunker (sama seperti contohmu)
+        -----------------------------------------------------------
+        local function ReturnBunkerFurnitureList()
+            local wypos = GetWyposFolder()
+            if not wypos then return {} end
+
+            local list = {}
+            local seen = {}
+
+            local function scan(folder)
+                for _, obj in ipairs(folder:GetChildren()) do
+                    if obj:IsA("Model") then
+                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                        if part and IsInsideBunker(part) and not seen[obj.Name] then
+                            table.insert(list, obj.Name)
+                            seen[obj.Name] = true
+                        end
+                    elseif obj:IsA("Folder") then
+                        scan(obj)
+                    end
+                end
+            end
+
+            scan(wypos)
+            table.sort(list)
+            return list
+        end
+
+        -----------------------------------------------------------
+        -- Find Model By Name di Bunker (pattern sama seperti contoh)
+        -----------------------------------------------------------
+        local function FindModelInBunkerByName(name)
+            local wypos = GetWyposFolder()
+            if not wypos then return nil end
+
+            local result = nil
+
+            local function search(folder)
+                if result then return end
+
+                for _, obj in ipairs(folder:GetChildren()) do
+                    if obj:IsA("Model") and obj.Name == name then
+                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                        if part and IsInsideBunker(part) then
+                            result = obj
+                            return
+                        end
+                    end
+
+                    if obj:IsA("Folder") then
+                        search(obj)
+                    end
+                end
+            end
+
+            search(wypos)
+            return result
+        end
+
+        -----------------------------------------------------------
+        -- Bring & Pickup Furniture (flow SAMA seperti contohmu)
+        -----------------------------------------------------------
+        local function BringAndPickupBunkerFurniture(name)
+            local hrp = GetHRP()
+            if not hrp then 
+                return warn("HRP tidak ditemukan!")
+            end
+
+            local originalCF = hrp.CFrame
+            local model = FindModelInBunkerByName(name)
+
+            if not model then
+                return warn("Furniture tidak ditemukan atau di luar Bunker!")
+            end
+
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if not part then
+                return warn("Part furniture tidak ditemukan!")
+            end
+
+            -- 1. Teleport ke furniture (agar masuk jarak server)
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+            task.wait(0.25)
+
+            -- 2. Jalankan event pickup
+            pcall(function()
+                RS.PickupItemEvent:FireServer(model)
+            end)
+
+            -- 3. Teleport kembali ke posisi semula
+            task.wait(0.25)
+            local newHrp = GetHRP()
+            if newHrp then
+                pcall(function()
+                    newHrp.CFrame = originalCF
+                end)
+            end
+
+            return true
+        end
+
+        -----------------------------------------------------------
+        -- Teleport ke Furniture + return otomatis 5 detik (SAMA seperti contoh)
+        -----------------------------------------------------------
+        local function TeleportToFurnitureByName(name)
+            local hrp = GetHRP()
+            if not hrp then return end
+
+            local original = hrp.CFrame
+            local model = FindModelInBunkerByName(name)
+
+            if not model then
+                warn("Furniture di luar Bunker boundary!")
+                return
+            end
+
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if not part then return end
+
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+
+            task.delay(5, function()
+                local hrp2 = GetHRP()
+                if hrp2 then
+                    pcall(function()
+                        hrp2.CFrame = original
+                    end)
+                end
+            end)
+        end
+
+        -----------------------------------------------------------
+        -- GUI COMPONENTS (DROPDOWN & BUTTON SAMA PERSIS seperti contoh)
+        -----------------------------------------------------------
+        local m = lib:Window("Bunker Furniture GUI")
+        local furnOptions = ReturnBunkerFurnitureList()
+
+        local furnDropdown = m:Dropdown("Selected Furniture", furnOptions, function(option)
+            selected = option
+        end)
+
+        m:Button("Refresh Furniture List", function()
+            local newList = ReturnBunkerFurnitureList()
+            pcall(function()
+                furnDropdown:UpdateOptions(newList)
+            end)
+        end)
+
+        m:Button("Bring Selected Furniture", function()
+            if not selected then
+                return warn("Pilih furniture terlebih dahulu!")
+            end
+
+            BringAndPickupBunkerFurniture(selected)
+        end)
+
+        m:Button("Teleport to Furniture", function()
+            if not selected then
+                warn("Pilih furniture terlebih dahulu!")
+                return
+            end
+
+            TeleportToFurnitureByName(selected)
+        end)
+
+        m:Button("Close GUI", function()
+            pcall(function()
+                if m and m.Destroy then m:Destroy() end
+            end)
+        end)
+    end
+})
+
