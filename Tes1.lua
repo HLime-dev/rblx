@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 26",
+   Name = "DN bug fixed 27",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1316,9 +1316,9 @@ local TestingTab = Window:CreateTab("Testing", 4483362458)
 --==================== BUNKER FURNITURE GUI (FIXED) =================
 --------------------------------------------------------------------
 
-local FurnitureSection = Testing:CreateSection("Furniture Bunker")
+local FurnitureSection = TestingTab:CreateSection("Furniture Bunker")
 
-Testing:CreateButton({
+TestingTab:CreateButton({
     Name = "Open Bunker Furniture GUI",
     Callback = function()
         -----------------------------------------------------------
