@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 20",
+   Name = "DN bug fixed 21",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -463,28 +463,37 @@ MainTab:CreateButton({
         -----------------------------------------------------------
         -- BRING FURNITURE (FIXED REAL bring)
         -----------------------------------------------------------
-        local function BringFurnitureToPlayer(name)
-            local model = FindModelInMarketByName(name)
-            local char = localPlr.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local function PickupFurnitureByName(name)
+    local model = FindModelInMarketByName(name)
+    local player = Players.LocalPlayer
 
-            if model and hrp then
-                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-                if not part then return false end
-
-                -- pindahkan ke depan player
-                local targetCF = hrp.CFrame * CFrame.new(0, 0, -6)
-                model:SetPrimaryPartCFrame(targetCF)
-
-                -- tetap fire server (jika memang dibutuhkan)
-                pcall(function()
-                    RS.PickupItemEvent:FireServer(model)
-                end)
-
-                return true
+    if model then
+        -- buat semua part bisa digerakkan
+        for _, p in model:GetDescendants() do
+            if p:IsA("BasePart") then
+                p.Anchored = false
+                p:SetNetworkOwner(player)
             end
-            return false
         end
+
+        -- fire ke server (fungsi pickup asli tetap dipakai)
+        pcall(function()
+            RS.PickupItemEvent:FireServer(model)
+        end)
+
+        -- setelah server pickup, pastikan di-parent ke workspace biar tetap interactable
+        task.delay(0.2, function()
+            if model then
+                model.Parent = workspace
+            end
+        end)
+
+        return true
+    end
+
+    return false
+end
+
 
         -----------------------------------------------------------
         -- TELEPORT (Tetap bekerja)
@@ -524,9 +533,46 @@ MainTab:CreateButton({
         end)
 
         m:Button("Bring Selected Furniture", function()
-            if not selected then warn("Pilih furniture dulu!") return end
-            if not BringFurnitureToPlayer(selected) then warn("Tidak ditemukan / di luar Market!") end
+    if not selected then 
+        warn("Pilih furniture dulu!") 
+        return 
+    end
+
+    if not PickupFurnitureByName(selected) then
+        warn("Tidak ditemukan atau di luar Market!")
+        return
+    end
+
+    -- Setelah pickup, attach agar bisa digunakan & diposisikan
+    local char = GetChar()
+    local hrp = GetHRP()
+    local model = FindModelInMarketByName(selected)
+
+    if model and hrp then
+        for _, p in model:GetDescendants() do
+            if p:IsA("BasePart") then
+                p.Anchored = false
+                p.CanCollide = true
+                p:SetNetworkOwner(plr)
+            end
+        end
+
+        local follow
+        follow = game:GetService("RunService").Heartbeat:Connect(function()
+            if not model or not model.Parent then
+                follow:Disconnect()
+                return
+            end
+            local targetCF = hrp.CFrame * CFrame.new(0, 0, -5)
+            model:SetPrimaryPartCFrame(targetCF)
         end)
+
+        task.delay(5, function()
+            if follow then follow:Disconnect() end
+        end)
+    end
+end)
+
 
         m:Button("Teleport to Furniture", function()
             if not selected then warn("Pilih furniture dulu!") return end
