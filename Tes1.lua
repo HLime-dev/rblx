@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 32",
+   Name = "DN bug fixed 33",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -668,7 +668,7 @@ local function BringAndPickupFurniture(name)
     end
 
     -- 1. Teleport ke furniture (agar masuk jarak server)
-    hrp.CFrame = part.CFrame + Vector3.new(0, 5, 5)
+    hrp.CFrame = part.CFrame + Vector3.new(0, 0, 5)
     task.wait(0.25)
 
     -- 2. Jalankan event pickup
@@ -704,7 +704,7 @@ end
             local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
             if not part then return end
 
-            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 5)
+            hrp.CFrame = part.CFrame + Vector3.new(0, 0, 5)
 
             task.delay(3, function()
                 if hrp then
@@ -912,7 +912,7 @@ MainTab:CreateButton({
             end
 
             -- 1. Teleport ke furniture (agar masuk jarak server)
-            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 5)
+            hrp.CFrame = part.CFrame + Vector3.new(0, 0, 5)
             task.wait(0.5)
 
             -- 2. Jalankan event pickup
@@ -950,9 +950,9 @@ MainTab:CreateButton({
             local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
             if not part then return end
 
-            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 5)
+            hrp.CFrame = part.CFrame + Vector3.new(0, 0, 5)
 
-            task.delay(5, function()
+            task.delay(3, function()
                 local hrp2 = GetHRP()
                 if hrp2 then
                     pcall(function()
