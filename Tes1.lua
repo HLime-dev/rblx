@@ -1191,17 +1191,17 @@ local teleportLocations = {
     ["Bundaran"] = function()
         local hrp = GetHRP()
         if hrp then hrp.CFrame = CFrame.new(412.1, 32.7, 152.8) end
-    end
+    end,
 
     ["Plafon"] = function()
         local hrp = GetHRP()
         if hrp then hrp.CFrame = CFrame.new(47.4, 25.9, -111.9) end
-    end
+    end,
 
    ["Bawah"] = function()
         local hrp = GetHRP()
         if hrp then hrp.CFrame = CFrame.new(137.6, -12.4, -81.8) end
-    end
+    end,
 
    ["Bawah Bunker"] = function()
         local hrp = GetHRP()
