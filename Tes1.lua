@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 35",
+   Name = "DN bug fixed 36",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1722,7 +1722,7 @@ TestingTab:CreateButton({
                     hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
                     task.wait(0.15)
                     pcall(function() fireproximityprompt(prompt) end)
-                    task.wait(0.5)
+                    task.wait(1)
                 end
             end
         end
