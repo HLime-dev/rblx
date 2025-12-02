@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 34",
+   Name = "DN bug fixed 35",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1603,3 +1603,136 @@ TestingTab:CreateButton({
     end
 })
 
+-----------------
+TestingTab:CreateButton({
+    Name = "Collect All Food (Skip Bunkers)",
+    Callback = function()
+
+        local hrp = GetHRP()
+        if not hrp then return end
+
+        local lastPos = hrp.CFrame
+
+        local bunkersFolder = workspace:FindFirstChild("Bunkers")
+        local bunkerCenters = {}
+
+        ----------------------------------------------------
+        -- 1. Ambil data semua bunker
+        ----------------------------------------------------
+        if bunkersFolder then
+            for _, bunker in ipairs(bunkersFolder:GetChildren()) do
+                
+                -- cari primarypart atau part terbesar
+                local biggestPart = nil
+                local maxSize = 0
+
+                for _, obj in ipairs(bunker:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local mag = obj.Size.Magnitude
+                        if mag > maxSize then
+                            maxSize = mag
+                            biggestPart = obj
+                        end
+                    end
+                end
+
+                if biggestPart then
+                    table.insert(bunkerCenters, {
+                        pos = biggestPart.Position,
+                        radius = (biggestPart.Size.Magnitude / 2) + 20
+                    })
+                end
+            end
+        end
+
+        ----------------------------------------------------
+        -- 2. Fungsi cek apakah part berada di dalam salah satu bunker
+        ----------------------------------------------------
+        local function IsInsideAnyBunker(part)
+            if not part then return false end
+
+            for _, bunker in ipairs(bunkerCenters) do
+                if (part.Position - bunker.pos).Magnitude <= bunker.radius then
+                    return true
+                end
+            end
+
+            return false
+        end
+
+        ----------------------------------------------------
+        -- 3. Fungsi anti pickup tool dekat MONSTER
+        --    Menggunakan struktur folder Night (sama seperti ESP kamu)
+        ----------------------------------------------------
+        local function IsNearMonster(part)
+            if not part then return false end
+
+            -- cari folder Night
+            local nightFolder = nil
+            for _, f in ipairs(Workspace:GetChildren()) do
+                if f:IsA("Folder") and f.Name:match("Night") then
+                    nightFolder = f
+                    break
+                end
+            end
+
+            if not nightFolder then return false end
+
+            local pos = part.Position
+            local avoidRange = 25 -- JARAK AMAN DARI MONSTER
+
+            for _, monster in ipairs(nightFolder:GetChildren()) do
+                if monster:IsA("Model") then
+                    local hrpM = monster:FindFirstChild("HumanoidRootPart")
+                    if hrpM then
+                        if (pos - hrpM.Position).Magnitude <= avoidRange then
+                            return true -- terlalu dekat monster → skip pickup
+                        end
+                    end
+                end
+            end
+
+            return false -- aman
+        end
+
+        ----------------------------------------------------
+        -- 4. Scan & collect food (skip bunker + skip monster)
+        ----------------------------------------------------
+        for _, tool in ipairs(Workspace:GetDescendants()) do
+            if tool:IsA("Tool") then
+
+                local handle = tool:FindFirstChild("Handle")
+                local prompt = handle and handle:FindFirstChildOfClass("ProximityPrompt")
+
+                if handle and prompt then
+                    
+                    -- SKIP: Food ada di dalam bunker
+                    if IsInsideAnyBunker(handle) then
+                        continue
+                    end
+
+                    -- SKIP: Food terlalu dekat monster
+                    if IsNearMonster(handle) then
+                        continue
+                    end
+
+                    ------------------------------------------------
+                    -- Collect jika aman
+                    ------------------------------------------------
+                    hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
+                    task.wait(0.15)
+                    pcall(function() fireproximityprompt(prompt) end)
+                    task.wait(0.5)
+                end
+            end
+        end
+
+        ----------------------------------------------------
+        -- 5. Kembalikan player ke posisi awal
+        ----------------------------------------------------
+        task.wait(0.1)
+        pcall(function()
+            hrp.CFrame = lastPos
+        end)
+    end
+})
