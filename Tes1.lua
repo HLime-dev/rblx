@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 33",
+   Name = "DN bug fixed 34",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -304,7 +304,7 @@ MainTab:CreateButton({
                         hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
                         task.wait(0.15)
                         pcall(function() fireproximityprompt(prompt) end)
-                        task.wait(0.05)
+                        task.wait(0.5)
                     end
                 end
             end
@@ -392,7 +392,7 @@ MainTab:CreateButton({
                     hrp.CFrame = handle.CFrame + Vector3.new(0,4,0)
                     task.wait(0.15)
                     pcall(function() fireproximityprompt(prompt) end)
-                    task.wait(0.05)
+                    task.wait(0.5)
                 end
             end
         end
@@ -540,6 +540,10 @@ MainTab:CreateButton({
 
     -- REQUIREMENT: harus berada di atas Y = 6
     if pos.Y < 0 then
+        return false
+    end
+            
+    if pos.Y > 20 then
         return false
     end
 
@@ -1206,6 +1210,11 @@ local teleportLocations = {
    ["Bawah Bunker"] = function()
         local hrp = GetHRP()
         if hrp then hrp.CFrame = CFrame.new(534.4, -19.9, 62.0) end
+    end,
+
+   ["Labirin"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(-4683.2, 6.8, 246.6) end
     end
 }
 
@@ -1213,7 +1222,7 @@ local selectedTP = nil
 
 local teleportDropdown = TeleportTab:CreateDropdown({
     Name = "Select Teleport Location",
-    Options = {"My Bunker", "Market", "Pintu Kecil", "Palette 2", "Gudang", "Palette 1", "Kolam", "Bundaran", "Plafon", "Bawah", "Bawah Bunker"},
+    Options = {"My Bunker", "Market", "Pintu Kecil", "Palette 2", "Gudang", "Palette 1", "Kolam", "Bundaran", "Plafon", "Bawah", "Bawah Bunker", "Labirin"},
     CurrentOption = nil,
     Callback = function(option)
         selectedTP = option   -- "option" = { "My Bunker" } (table)
