@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 37",
+   Name = "DN bug fixed 38",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1734,5 +1734,156 @@ TestingTab:CreateButton({
         pcall(function()
             hrp.CFrame = lastPos
         end)
+    end
+})
+
+
+---===================================================================--
+------------------------------------------tele-------------------------
+
+local TeleportSection = TestingTab:CreateSection("Teleport Monsters")
+
+local teleportLocations = {
+    -- =========================
+    -- JUMPER
+    -- =========================
+    ["Jumper 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(44.2, 15.5, 179.2) end
+    end,
+    ["Jumper 2"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(373.5, 16.7, -40.1) end
+    end,
+    ["Jumper 3"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(344.7, 16.0, -626.9) end
+    end,
+    ["Jumper 4"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(330.2, 15.5, 229.2) end
+    end,
+    ["Jumper 5"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(330.7, 11.3, 561.2) end
+    end,
+    ["Jumper 6"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(42.3, 10.0, -208.6) end
+    end,
+    ["Jumper 7"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(343.9, 9.5, -329.3) end
+    end,
+
+    -- =========================
+    -- CATCHER
+    -- =========================
+    ["Catcher 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(459.2, 9.7, 599.0) end
+    end,
+    ["Catcher 2"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(55.1, 13.3, 167.9) end
+    end,
+    ["Catcher 3"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(470.7, 10.2, 8.3) end
+    end,
+    ["Catcher 4"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(73.4, 11.9, -213.0) end
+    end,
+    ["Catcher 5"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(460.6, 13.6, -601.1) end
+    end,
+
+    -- =========================
+    -- LURKER
+    -- =========================
+    ["Lurker 1"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(405.7, 8.2, -21.3) end
+    end,
+    ["Lurker 2"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(403.1, 9.1, 279.1) end
+    end,
+    ["Lurker 3"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(104.5, 8.2, 277.4) end
+    end,
+    ["Lurker 4"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(401.8, 8.2, -625.4) end
+    end,
+    ["Lurker 5"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(404.5, 8.2, 581.3) end
+    end,
+    ["Lurker 6"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(402.7, 8.1, -327.3) end
+    end,
+    ["Lurker 7"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(97.9, 8.2, -328.6) end
+    end,
+    ["Lurker 8"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(79.1, 12.0, -9.9) end
+    end,
+    ["Lurker 9"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(-12.9, 9.1, 168.1) end
+    end,
+}
+
+-- ==============================
+-- DROPDOWN
+-- ==============================
+
+local optionsList = {
+    "Jumper 1","Jumper 2","Jumper 3","Jumper 4","Jumper 5","Jumper 6","Jumper 7",
+    "Catcher 1","Catcher 2","Catcher 3","Catcher 4","Catcher 5",
+    "Lurker 1","Lurker 2","Lurker 3","Lurker 4","Lurker 5","Lurker 6","Lurker 7","Lurker 8","Lurker 9"
+}
+
+local selectedTP = nil
+
+local teleportDropdown = TestingTab:CreateDropdown({
+    Name = "Select Monster Location",
+    Options = optionsList,
+    CurrentOption = nil,
+    Callback = function(option)
+        selectedTP = option
+    end
+})
+
+TestingTab:CreateButton({
+    Name = "Teleport",
+    Callback = function()
+        if not selectedTP then
+            return Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Pilih lokasi dulu!",
+                Duration = 2
+            })
+        end
+
+        local key = selectedTP[1]
+        local func = teleportLocations[key]
+
+        if func then
+            func()
+        else
+            Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Lokasi tidak ditemukan: " .. tostring(key),
+                Duration = 2
+            })
+        end
     end
 })
