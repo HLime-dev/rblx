@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 39",
+   Name = "DN bug fixed 40",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1741,121 +1741,100 @@ TestingTab:CreateButton({
 ---===================================================================--
 ------------------------------------------tele-------------------------
 
-local TeleportSection = TestingTab:CreateSection("Teleport Monsters")
+local TeleportSection = TestingTab:CreateSection("Teleport Monster")
 
 local teleportLocations = {
-    -- =========================
-    -- JUMPER
-    -- =========================
-    ["Jumper 1"] = function()
+    ["3 Kotak (463.6, -601.6)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(44.2, 15.5, 179.2) end
-    end,
-    ["Jumper 2"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(373.5, 16.7, -40.1) end
-    end,
-    ["Jumper 3"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(344.7, 16.0, -626.9) end
-    end,
-    ["Jumper 4"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(330.2, 15.5, 229.2) end
-    end,
-    ["Jumper 5"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(330.7, 11.3, 561.2) end
-    end,
-    ["Jumper 6"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(42.3, 10.0, -208.6) end
-    end,
-    ["Jumper 7"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(343.9, 9.5, -329.3) end
+        if hrp then hrp.CFrame = CFrame.new(463.6, 10, -601.6) end
     end,
 
-    -- =========================
-    -- CATCHER
-    -- =========================
-    ["Catcher 1"] = function()
+    ["3 Kotak (406.6, -633.4)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(459.2, 9.7, 599.0) end
-    end,
-    ["Catcher 2"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(55.1, 13.3, 167.9) end
-    end,
-    ["Catcher 3"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(470.7, 10.2, 8.3) end
-    end,
-    ["Catcher 4"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(73.4, 11.9, -213.0) end
-    end,
-    ["Catcher 5"] = function()
-        local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(460.6, 13.6, -601.1) end
+        if hrp then hrp.CFrame = CFrame.new(406.6, 10, -633.4) end
     end,
 
-    -- =========================
-    -- LURKER
-    -- =========================
-    ["Lurker 1"] = function()
+    ["2 Kotak (341.3, -623.2)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(405.7, 8.2, -21.3) end
+        if hrp then hrp.CFrame = CFrame.new(341.3, 10, -623.2) end
     end,
-    ["Lurker 2"] = function()
+
+    ["1 Kotak (344.9, -326.3)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(403.1, 9.1, 279.1) end
+        if hrp then hrp.CFrame = CFrame.new(344.9, 10, -326.3) end
     end,
-    ["Lurker 3"] = function()
+
+    ["1 Kotak (399, -330.5)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(104.5, 8.2, 277.4) end
+        if hrp then hrp.CFrame = CFrame.new(399, 10, -330.5) end
     end,
-    ["Lurker 4"] = function()
+
+    ["4 Kotak (471.8, 4.2)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(401.8, 8.2, -625.4) end
+        if hrp then hrp.CFrame = CFrame.new(471.8, 10, 4.2) end
     end,
-    ["Lurker 5"] = function()
+
+    ["2 Kotak (402.2, -26.5)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(404.5, 8.2, 581.3) end
+        if hrp then hrp.CFrame = CFrame.new(402.2, 10, -26.5) end
     end,
-    ["Lurker 6"] = function()
+
+    ["1 Kotak (370.6, -41.4)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(402.7, 8.1, -327.3) end
+        if hrp then hrp.CFrame = CFrame.new(370.6, 10, -41.4) end
     end,
-    ["Lurker 7"] = function()
+
+    ["1 Kotak (331.1, 230.3)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(97.9, 8.2, -328.6) end
+        if hrp then hrp.CFrame = CFrame.new(331.1, 10, 230.3) end
     end,
-    ["Lurker 8"] = function()
+
+    ["4 Kotak (404.6, 278.3)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(79.1, 12.0, -9.9) end
+        if hrp then hrp.CFrame = CFrame.new(404.6, 10, 278.3) end
     end,
-    ["Lurker 9"] = function()
+
+    ["2 Kotak (337, 560.2)"] = function()
         local hrp = GetHRP()
-        if hrp then hrp.CFrame = CFrame.new(-12.9, 9.1, 168.1) end
+        if hrp then hrp.CFrame = CFrame.new(337, 10, 560.2) end
     end,
+
+    ["1 Kotak (267.8, 566.9)"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(267.8, 10, 566.9) end
+    end,
+
+    ["2 Kotak (398, 579.4)"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(398, 10, 579.4) end
+    end,
+
+    ["1 Kotak (457.6, 598.2)"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(457.6, 10, 598.2) end
+    end,
+
+    ["2 Kotak (104.9, 279.6)"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(104.9, 10, 279.6) end
+    end,
+
+    ["2 Kotak (98.4, -327.1)"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(98.4, 10, -327.1) end
+    end
 }
 
--- ==============================
--- DROPDOWN
--- ==============================
-
-local optionsList = {
-    "Jumper 1","Jumper 2","Jumper 3","Jumper 4","Jumper 5","Jumper 6","Jumper 7",
-    "Catcher 1","Catcher 2","Catcher 3","Catcher 4","Catcher 5",
-    "Lurker 1","Lurker 2","Lurker 3","Lurker 4","Lurker 5","Lurker 6","Lurker 7","Lurker 8","Lurker 9"
-}
+local options = {}
+for name,_ in pairs(teleportLocations) do
+    table.insert(options, name)
+end
 
 local selectedTP = nil
 
 local teleportDropdown = TestingTab:CreateDropdown({
-    Name = "Select Monster Location",
-    Options = optionsList,
+    Name = "Select Teleport Location (CEYA)",
+    Options = options,
     CurrentOption = nil,
     Callback = function(option)
         selectedTP = option
@@ -1876,8 +1855,7 @@ TestingTab:CreateButton({
         local key = selectedTP[1]
         local func = teleportLocations[key]
 
-        if func then
-            func()
+        if func then func()
         else
             Rayfield:Notify({
                 Title = "Teleport",
@@ -1887,3 +1865,4 @@ TestingTab:CreateButton({
         end
     end
 })
+
