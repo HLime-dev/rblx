@@ -1,7 +1,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "DN bug fixed 40",
+   Name = "DN bug fixed 41",
    LoadingTitle = "Dangerous Night",
    LoadingSubtitle = "by Haex",
    ConfigurationSaving = { Enabled = false },
@@ -1212,7 +1212,12 @@ local teleportLocations = {
         if hrp then hrp.CFrame = CFrame.new(534.4, -19.9, 62.0) end
     end,
 
-   ["Labirin"] = function()
+   ["Start Labirin"] = function()
+        local hrp = GetHRP()
+        if hrp then hrp.CFrame = CFrame.new(-4993, 5, 6) end
+    end,
+
+   ["End Labirin"] = function()
         local hrp = GetHRP()
         if hrp then hrp.CFrame = CFrame.new(-4683.2, 6.8, 246.6) end
     end
@@ -1222,7 +1227,7 @@ local selectedTP = nil
 
 local teleportDropdown = TeleportTab:CreateDropdown({
     Name = "Select Teleport Location",
-    Options = {"My Bunker", "Market", "Pintu Kecil", "Palette 2", "Gudang", "Palette 1", "Kolam", "Bundaran", "Plafon", "Bawah", "Bawah Bunker", "Labirin"},
+    Options = {"My Bunker", "Market", "Pintu Kecil", "Palette 2", "Gudang", "Palette 1", "Kolam", "Bundaran", "Plafon", "Bawah", "Bawah Bunker", "Start Labirin", "End Labirin"},
     CurrentOption = nil,
     Callback = function(option)
         selectedTP = option   -- "option" = { "My Bunker" } (table)
