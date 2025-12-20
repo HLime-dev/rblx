@@ -224,7 +224,7 @@ Tab:CreateToggle({
                     for _, name in ipairs(SelectedFurniture) do
                         if Pickup(name) then
                             foundAny = true
-                            task.wait(0.3)
+                            task.wait(0.5)
                             Drop()
                             task.wait(0.3)
                         end
