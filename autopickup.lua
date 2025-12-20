@@ -1,9 +1,9 @@
 --------------------------------------------------
--- MARKET + BUNKER AUTO FARM (RAYFIELD PERSISTENT)
+-- MARKET + BUNKER AUTO FARM (RAYFIELD FIXED)
 --------------------------------------------------
 
-if getgenv().FurnitureAllLoaded then return end
-getgenv().FurnitureAllLoaded = true
+if getgenv().FurnitureAutoFarmLoaded then return end
+getgenv().FurnitureAutoFarmLoaded = true
 
 --------------------------------------------------
 -- SERVICES
@@ -21,13 +21,13 @@ local function GetHRP()
 end
 
 --------------------------------------------------
--- RAYFIELD
+-- LOAD RAYFIELD
 --------------------------------------------------
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Furniture Auto Farm111",
+    Name = "Furniture Auto Farm",
     LoadingTitle = "Market + Bunker",
     LoadingSubtitle = "Persistent Config",
     ConfigurationSaving = {
@@ -37,19 +37,26 @@ local Window = Rayfield:CreateWindow({
     },
 })
 
-local MarketTab = Window:CreateTab("Market", 4483362458)
-local BunkerTab = Window:CreateTab("Bunker", 4483362458)
-local SettingsTab = Window:CreateTab("Settings", 4483362458)
+task.wait(0.3)
+local MarketTab = Window:CreateTab("Market", nil)
+task.wait(0.3)
+local BunkerTab = Window:CreateTab("Bunker", nil)
+task.wait(0.3)
+local SettingsTab = Window:CreateTab("Settings", nil)
 
 --------------------------------------------------
--- SETTINGS FLAGS
+-- FLAGS
 --------------------------------------------------
 
+local MarketSelected = {}
+local BunkerSelected = {}
+local MarketRun = false
+local BunkerRun = false
 local EnableServerHop = false
 local EnableBunkerDrop = true
 
 --------------------------------------------------
--- MARKET FUNCTIONS
+-- MARKET BOUNDARY
 --------------------------------------------------
 
 local MarketPoints = {
@@ -59,14 +66,14 @@ local MarketPoints = {
     Vector2.new(50, 145)
 }
 
-local function PointInPolygon(point, poly)
+local function PointInPolygon(p, poly)
     local inside = false
     local j = #poly
     for i = 1, #poly do
         local xi, zi = poly[i].X, poly[i].Y
         local xj, zj = poly[j].X, poly[j].Y
-        if ((zi > point.Y) ~= (zj > point.Y))
-        and (point.X < (xj-xi)*(point.Y-zi)/(zj-zi+0.0001)+xi) then
+        if ((zi > p.Y) ~= (zj > p.Y))
+        and (p.X < (xj-xi)*(p.Y-zi)/(zj-zi+0.0001)+xi) then
             inside = not inside
         end
         j = i
@@ -80,6 +87,10 @@ local function IsInsideMarket(part)
     if p.Y < 0 or p.Y > 20 then return false end
     return PointInPolygon(Vector2.new(p.X, p.Z), MarketPoints)
 end
+
+--------------------------------------------------
+-- MARKET SCAN
+--------------------------------------------------
 
 local function GetMarketFolder()
     for _, v in ipairs(workspace:GetChildren()) do
@@ -127,7 +138,7 @@ local function FindMarketModel(name)
 end
 
 --------------------------------------------------
--- BUNKER FUNCTIONS
+-- BUNKER SCAN
 --------------------------------------------------
 
 local function GetWypos()
@@ -197,7 +208,7 @@ end
 -- PICKUP / DROP
 --------------------------------------------------
 
-local function PickupModel(model)
+local function Pickup(model)
     local hrp = GetHRP()
     local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
     if not part then return false end
@@ -238,8 +249,6 @@ end
 -- UI : MARKET
 --------------------------------------------------
 
-local MarketSelected, MarketRun = {}, false
-
 MarketTab:CreateDropdown({
     Name = "Market Furniture",
     Options = GetMarketList(),
@@ -261,7 +270,7 @@ MarketTab:CreateToggle({
                         local m = FindMarketModel(n)
                         if m then
                             found = true
-                            PickupModel(m)
+                            Pickup(m)
                             Drop()
                         end
                     end
@@ -276,8 +285,6 @@ MarketTab:CreateToggle({
 --------------------------------------------------
 -- UI : BUNKER
 --------------------------------------------------
-
-local BunkerSelected, BunkerRun = {}, false
 
 BunkerTab:CreateDropdown({
     Name = "Bunker Furniture",
@@ -300,7 +307,7 @@ BunkerTab:CreateToggle({
                         local m = FindBunkerModel(n)
                         if m then
                             found = true
-                            PickupModel(m)
+                            Pickup(m)
                             if EnableBunkerDrop then Drop() end
                         end
                     end
@@ -319,7 +326,6 @@ BunkerTab:CreateToggle({
 SettingsTab:CreateToggle({
     Name = "Enable Server Hop",
     Flag = "EnableServerHop",
-    CurrentValue = false,
     Callback = function(v) EnableServerHop = v end
 })
 
@@ -331,11 +337,12 @@ SettingsTab:CreateToggle({
 })
 
 --------------------------------------------------
--- AUTO RESUME
+-- AUTO RESUME (SETELAH LOAD CONFIG)
 --------------------------------------------------
 
-task.delay(3, function()
+task.delay(2, function()
     local f = Rayfield.Flags
+    if not f then return end
     MarketSelected = f.MarketSelect or {}
     BunkerSelected = f.BunkerSelect or {}
     EnableServerHop = f.EnableServerHop or false
