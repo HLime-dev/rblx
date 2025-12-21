@@ -13,7 +13,7 @@ local plr = Players.LocalPlayer
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "DN HaeX — Furniture Hub",
+    Name = "DN HaeX — Furniture Hub 1",
     LoadingTitle = "DN HaeX",
     LoadingSubtitle = "Furniture Automation",
     ConfigurationSaving = {
@@ -79,26 +79,46 @@ local function GetMarketFolder()
 end
 
 --------------------------------------------------------------------
---====================== BUNKER DETECTION =========================
+--====================== BUNKER DETECTION (FIX) ===================
 --------------------------------------------------------------------
-local function IsInsideBunker(part)
+local function GetNearestBunker()
     local bunkers = workspace:FindFirstChild("Bunkers")
-    if not bunkers then return false end
+    if not bunkers then return end
 
-    local bunker = bunkers:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    local hrp = GetHRP()
+    local nearest, dist = nil, math.huge
+
+    for _, bunker in ipairs(bunkers:GetChildren()) do
+        local ref = bunker.PrimaryPart or bunker:FindFirstChildWhichIsA("BasePart")
+        if ref then
+            local d = (hrp.Position - ref.Position).Magnitude
+            if d < dist then
+                dist = d
+                nearest = bunker
+            end
+        end
+    end
+
+    return nearest
+end
+
+local function IsInsideBunker(part)
+    if not part then return false end
+
+    local bunker = GetNearestBunker()
     if not bunker then return false end
 
     local ref = bunker.PrimaryPart or bunker:FindFirstChildWhichIsA("BasePart")
     if not ref then return false end
 
-    local size = Vector3.new(50,50,50)
+    local size = Vector3.new(60,60,60)
     local min = ref.Position - size/2
     local max = ref.Position + size/2
     local p = part.Position
 
-    return p.X>=min.X and p.X<=max.X and
-           p.Y>=min.Y and p.Y<=max.Y and
-           p.Z>=min.Z and p.Z<=max.Z
+    return p.X>=min.X and p.X<=max.X
+       and p.Y>=min.Y and p.Y<=max.Y
+       and p.Z>=min.Z and p.Z<=max.Z
 end
 
 --------------------------------------------------------------------
@@ -177,8 +197,6 @@ local FurnitureTab = Window:CreateTab("Furniture", 4483362458)
 local ServerTab = Window:CreateTab("Server", 4483362458)
 
 ---------------- MARKET ----------------
-local MarketSection = FurnitureTab:CreateSection("Market Furniture")
-
 local marketSelected
 local marketLoop = false
 
@@ -191,7 +209,7 @@ local MarketDropdown = FurnitureTab:CreateDropdown({
 })
 
 FurnitureTab:CreateButton({
-    Name = "Pickup Selected (Once)",
+    Name = "Pickup Market (Once)",
     Callback = function()
         if marketSelected then
             local m = FindFurnitureByName(marketSelected, IsInsideMarket)
@@ -201,7 +219,7 @@ FurnitureTab:CreateButton({
 })
 
 FurnitureTab:CreateToggle({
-    Name = "Pickup Loop Until Empty",
+    Name = "Market Pickup Loop",
     CurrentValue = false,
     Callback = function(v)
         marketLoop = v
@@ -221,14 +239,7 @@ FurnitureTab:CreateToggle({
     end
 })
 
-FurnitureTab:CreateButton({
-    Name = "Drop All Items",
-    Callback = DropAll
-})
-
 ---------------- BUNKER ----------------
-local BunkerSection = FurnitureTab:CreateSection("Bunker Furniture")
-
 local bunkerSelected
 local bunkerLoop = false
 
@@ -241,7 +252,7 @@ local BunkerDropdown = FurnitureTab:CreateDropdown({
 })
 
 FurnitureTab:CreateButton({
-    Name = "Pickup Selected (Once)",
+    Name = "Pickup Bunker (Once)",
     Callback = function()
         if bunkerSelected then
             local m = FindFurnitureByName(bunkerSelected, IsInsideBunker)
@@ -251,7 +262,7 @@ FurnitureTab:CreateButton({
 })
 
 FurnitureTab:CreateToggle({
-    Name = "Pickup Loop Until Empty",
+    Name = "Bunker Pickup Loop",
     CurrentValue = false,
     Callback = function(v)
         bunkerLoop = v
@@ -273,7 +284,6 @@ FurnitureTab:CreateToggle({
 
 ---------------- SERVER ----------------
 local hop = false
-
 ServerTab:CreateToggle({
     Name = "Auto Server Hop",
     CurrentValue = false,
