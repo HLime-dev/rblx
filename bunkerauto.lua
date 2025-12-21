@@ -1,97 +1,121 @@
---------------------------------------------------
--- BUNKER FURNITURE AUTO FARM (RAYFIELD)
---------------------------------------------------
-
-if getgenv().BunkerFurnitureRayfieldLoaded then return end
-getgenv().BunkerFurnitureRayfieldLoaded = true
-
---------------------------------------------------
--- SERVICES
---------------------------------------------------
-
+--------------------------------------------------------------------
+--====================== SERVICES ================================
+--------------------------------------------------------------------
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
+local TP = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local plr = Players.LocalPlayer
 
-local function GetHRP()
-    local c = plr.Character or plr.CharacterAdded:Wait()
-    return c:WaitForChild("HumanoidRootPart")
-end
-
---------------------------------------------------
--- RAYFIELD WINDOW
---------------------------------------------------
-
+--------------------------------------------------------------------
+--====================== RAYFIELD LOAD ===========================
+--------------------------------------------------------------------
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Bunker Furniture Auto Farm",
-    LoadingTitle = "Bunker Furniture",
-    LoadingSubtitle = "Auto Pickup + Drop",
+    Name = "DN HaeX — Furniture Hub",
+    LoadingTitle = "DN HaeX",
+    LoadingSubtitle = "Furniture Automation",
     ConfigurationSaving = {
         Enabled = true,
-        FolderName = "FurnitureFarm",
-        FileName = "BunkerConfig"
+        FolderName = nil,
+        FileName = "DN HaeX"
     },
+    Discord = { Enabled = false },
+    KeySystem = false
 })
 
-local Tab = Window:CreateTab("Bunker Auto Farm", 4483362458)
-
---------------------------------------------------
--- BUNKER BOUNDARY
---------------------------------------------------
-
-local function IsInsideBunker(part)
-    if not part then return false end
-
-    local bunkers = workspace:FindFirstChild("Bunkers")
-    if not bunkers then return false end
-
-    local bunkerName = plr:GetAttribute("AssignedBunkerName")
-    if not bunkerName then return false end
-
-    local bunker = bunkers:FindFirstChild(bunkerName)
-    if not bunker then return false end
-
-    local center = bunker.PrimaryPart or bunker:FindFirstChildWhichIsA("BasePart")
-    if not center then return false end
-
-    -- boundary SAMA seperti permintaanmu
-    local size = Vector3.new(50,50,50)
-    local min = center.Position - size/2
-    local max = center.Position + size/2
-    local p = part.Position
-
-    return (p.X >= min.X and p.X <= max.X)
-       and (p.Y >= min.Y and p.Y <= max.Y)
-       and (p.Z >= min.Z and p.Z <= max.Z)
+--------------------------------------------------------------------
+--====================== UTILS ===================================
+--------------------------------------------------------------------
+local function GetHRP()
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
 end
 
---------------------------------------------------
--- WYPO SCAN
---------------------------------------------------
+local function SafeTP(cf)
+    local hrp = GetHRP()
+    hrp.CFrame = cf
+end
 
-local function GetWyposFolder()
+--------------------------------------------------------------------
+--====================== MARKET DETECTION =========================
+--------------------------------------------------------------------
+local MarketPoints = {
+    Vector2.new(50, -149.3),
+    Vector2.new(-266, -145.7),
+    Vector2.new(-266, 145),
+    Vector2.new(50, 145)
+}
+
+local function PointInPolygon(point, polygon)
+    local inside = false
+    local j = #polygon
+    for i = 1, #polygon do
+        local xi, zi = polygon[i].X, polygon[i].Y
+        local xj, zj = polygon[j].X, polygon[j].Y
+        if ((zi > point.Y) ~= (zj > point.Y)) and
+           (point.X < (xj - xi) * (point.Y - zi) / (zj - zi + 0.0001) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    return inside
+end
+
+local function IsInsideMarket(part)
+    if not part then return false end
+    local pos = part.Position
+    if pos.Y < 0 or pos.Y > 20 then return false end
+    return PointInPolygon(Vector2.new(pos.X, pos.Z), MarketPoints)
+end
+
+local function GetMarketFolder()
     for _, v in ipairs(workspace:GetChildren()) do
-        if v:IsA("Folder") and v.Name:lower():match("wypo") then
+        if v:IsA("Folder") and v.Name:lower():find("wypo") then
             return v
         end
     end
 end
 
-local function ReturnBunkerFurnitureList()
-    local wypos = GetWyposFolder()
-    if not wypos then return {} end
+--------------------------------------------------------------------
+--====================== BUNKER DETECTION =========================
+--------------------------------------------------------------------
+local function IsInsideBunker(part)
+    local bunkers = workspace:FindFirstChild("Bunkers")
+    if not bunkers then return false end
 
+    local bunker = bunkers:FindFirstChild(plr:GetAttribute("AssignedBunkerName"))
+    if not bunker then return false end
+
+    local ref = bunker.PrimaryPart or bunker:FindFirstChildWhichIsA("BasePart")
+    if not ref then return false end
+
+    local size = Vector3.new(50,50,50)
+    local min = ref.Position - size/2
+    local max = ref.Position + size/2
+    local p = part.Position
+
+    return p.X>=min.X and p.X<=max.X and
+           p.Y>=min.Y and p.Y<=max.Y and
+           p.Z>=min.Z and p.Z<=max.Z
+end
+
+--------------------------------------------------------------------
+--====================== SCAN FUNCTION ============================
+--------------------------------------------------------------------
+local function ScanFurniture(checkFunc)
+    local folder = GetMarketFolder()
+    if not folder then return {} end
     local list, seen = {}, {}
 
     local function scan(f)
         for _, o in ipairs(f:GetChildren()) do
             if o:IsA("Model") then
                 local p = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart", true)
-                if p and IsInsideBunker(p) and not seen[o.Name] then
-                    seen[o.Name] = true
+                if p and checkFunc(p) and not seen[o.Name] then
                     table.insert(list, o.Name)
+                    seen[o.Name] = true
                 end
             elseif o:IsA("Folder") then
                 scan(o)
@@ -99,125 +123,167 @@ local function ReturnBunkerFurnitureList()
         end
     end
 
-    scan(wypos)
+    scan(folder)
     table.sort(list)
     return list
 end
 
-local function FindModelInBunker(name)
-    local wypos = GetWyposFolder()
-    if not wypos then return end
-    local found
-
-    local function scan(f)
-        for _, o in ipairs(f:GetChildren()) do
-            if found then return end
-            if o:IsA("Model") and o.Name == name then
-                local p = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart", true)
-                if p and IsInsideBunker(p) then
-                    found = o
-                    return
-                end
-            elseif o:IsA("Folder") then
-                scan(o)
+local function FindFurnitureByName(name, checkFunc)
+    local folder = GetMarketFolder()
+    if not folder then return end
+    for _, o in ipairs(folder:GetDescendants()) do
+        if o:IsA("Model") and o.Name == name then
+            local p = o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart", true)
+            if p and checkFunc(p) then
+                return o
             end
         end
     end
-
-    scan(wypos)
-    return found
 end
 
---------------------------------------------------
--- PICKUP + DROP
---------------------------------------------------
-
-local function PickupBunkerFurniture(name)
-    local model = FindModelInBunker(name)
-    if not model then return false end
-
+--------------------------------------------------------------------
+--====================== PICKUP CORE ==============================
+--------------------------------------------------------------------
+local function PickupModel(model)
     local hrp = GetHRP()
-    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-    if not part then return false end
-
     local old = hrp.CFrame
-    hrp.CFrame = part.CFrame + Vector3.new(0,0,5)
+    local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if not part then return end
+
+    SafeTP(part.CFrame + Vector3.new(0,0,5))
     task.wait(0.25)
 
     pcall(function()
         RS.PickupItemEvent:FireServer(model)
     end)
 
-    task.wait(0.35)
-    hrp.CFrame = old
-    return true
+    task.wait(0.4)
+    SafeTP(old)
 end
 
-local function Drop()
-    if RS:FindFirstChild("DropItemEvent") then
+--------------------------------------------------------------------
+--====================== AUTO DROP ================================
+--------------------------------------------------------------------
+local function DropAll()
+    pcall(function()
         RS.DropItemEvent:FireServer()
-    end
+    end)
 end
 
---------------------------------------------------
--- UI CONTROLS
---------------------------------------------------
+--------------------------------------------------------------------
+--====================== UI ======================================
+--------------------------------------------------------------------
+local FurnitureTab = Window:CreateTab("Furniture", 4483362458)
+local ServerTab = Window:CreateTab("Server", 4483362458)
 
-local SelectedFurniture = {}
-local AutoFarm = false
+---------------- MARKET ----------------
+local MarketSection = FurnitureTab:CreateSection("Market Furniture")
 
-local FurnitureDropdown = Tab:CreateDropdown({
-    Name = "Select Bunker Furniture",
-    Options = ReturnBunkerFurnitureList(),
-    CurrentOption = {},
-    MultipleOptions = true,
-    Callback = function(opts)
-        SelectedFurniture = opts
-    end,
-})
+local marketSelected
+local marketLoop = false
 
-Tab:CreateButton({
-    Name = "Refresh Furniture List",
-    Callback = function()
-        FurnitureDropdown:Refresh(ReturnBunkerFurnitureList())
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Auto Pickup + Drop (Bunker)",
-    CurrentValue = false,
+local MarketDropdown = FurnitureTab:CreateDropdown({
+    Name = "Market Furniture",
+    Options = ScanFurniture(IsInsideMarket),
     Callback = function(v)
-        AutoFarm = v
+        marketSelected = v
+    end
+})
 
-        if v then
-            task.spawn(function()
-                task.wait(2)
-
-                while AutoFarm do
-                    for _, name in ipairs(SelectedFurniture) do
-                        if PickupBunkerFurniture(name) then
-                            task.wait(0.3)
-                            Drop()
-                            task.wait(0.3)
-                        end
-                    end
-                    task.wait(0.5)
-                end
-            end)
+FurnitureTab:CreateButton({
+    Name = "Pickup Selected (Once)",
+    Callback = function()
+        if marketSelected then
+            local m = FindFurnitureByName(marketSelected, IsInsideMarket)
+            if m then PickupModel(m) end
         end
     end
 })
 
---------------------------------------------------
--- AUTO RESUME INFO
---------------------------------------------------
-
-task.delay(4, function()
-    if AutoFarm then
-        Rayfield:Notify({
-            Title = "Bunker Auto Farm",
-            Content = "Config loaded — auto farm resumed",
-            Duration = 4
-        })
+FurnitureTab:CreateToggle({
+    Name = "Pickup Loop Until Empty",
+    CurrentValue = false,
+    Callback = function(v)
+        marketLoop = v
+        task.spawn(function()
+            while marketLoop do
+                local list = ScanFurniture(IsInsideMarket)
+                if #list == 0 then break end
+                for _, name in ipairs(list) do
+                    if not marketLoop then break end
+                    local m = FindFurnitureByName(name, IsInsideMarket)
+                    if m then PickupModel(m) end
+                    task.wait(0.15)
+                end
+            end
+            DropAll()
+        end)
     end
-end)
+})
+
+FurnitureTab:CreateButton({
+    Name = "Drop All Items",
+    Callback = DropAll
+})
+
+---------------- BUNKER ----------------
+local BunkerSection = FurnitureTab:CreateSection("Bunker Furniture")
+
+local bunkerSelected
+local bunkerLoop = false
+
+local BunkerDropdown = FurnitureTab:CreateDropdown({
+    Name = "Bunker Furniture",
+    Options = ScanFurniture(IsInsideBunker),
+    Callback = function(v)
+        bunkerSelected = v
+    end
+})
+
+FurnitureTab:CreateButton({
+    Name = "Pickup Selected (Once)",
+    Callback = function()
+        if bunkerSelected then
+            local m = FindFurnitureByName(bunkerSelected, IsInsideBunker)
+            if m then PickupModel(m) end
+        end
+    end
+})
+
+FurnitureTab:CreateToggle({
+    Name = "Pickup Loop Until Empty",
+    CurrentValue = false,
+    Callback = function(v)
+        bunkerLoop = v
+        task.spawn(function()
+            while bunkerLoop do
+                local list = ScanFurniture(IsInsideBunker)
+                if #list == 0 then break end
+                for _, name in ipairs(list) do
+                    if not bunkerLoop then break end
+                    local m = FindFurnitureByName(name, IsInsideBunker)
+                    if m then PickupModel(m) end
+                    task.wait(0.15)
+                end
+            end
+            DropAll()
+        end)
+    end
+})
+
+---------------- SERVER ----------------
+local hop = false
+
+ServerTab:CreateToggle({
+    Name = "Auto Server Hop",
+    CurrentValue = false,
+    Callback = function(v)
+        hop = v
+        task.spawn(function()
+            while hop do
+                TP:Teleport(game.PlaceId, plr)
+                task.wait(8)
+            end
+        end)
+    end
+})
